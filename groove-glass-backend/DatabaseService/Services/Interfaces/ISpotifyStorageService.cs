@@ -8,12 +8,12 @@ namespace DatabaseService.Services.Interfaces
         /// Saves the Spotify user data to the database.
         /// <paramref name="user">The spotify user</paramref>
         /// </summary>
-        Task StoreOrUpdateUserAsync(User user);
+        Task StoreOrUpdateUserAsync(SpotifyUser user);
 
         /// <summary>
         /// Retrieves the Spotify user data from the database.
         /// </summary>
         /// <param name="userId">The Spotify user ID.</param>
-        Task<User> GetUserAsync(string UserId);
+        Task<SpotifyUser> GetUserAsync(string UserId);
     }
 }

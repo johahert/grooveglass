@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace DatabaseService.Models.Entities
 {
-    public class User
+    public class SpotifyUser
     {
         [Key]
         public int Id { get; set; }

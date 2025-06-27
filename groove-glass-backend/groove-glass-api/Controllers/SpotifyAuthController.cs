@@ -1,9 +1,12 @@
-﻿using groove_glass_api.Models;
+﻿using DatabaseService.Models.Entities;
+using DatabaseService.Services.Interfaces;
+using groove_glass_api.Models;
+using groove_glass_api.Services.Interfaces;
+using groove_glass_api.Util;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
+using System;
+using System.Threading.Tasks;
 
 namespace groove_glass_api.Controllers
 {
@@ -11,13 +14,15 @@ namespace groove_glass_api.Controllers
     [ApiController]
     public class SpotifyAuthController : ControllerBase
     {
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _configuration;
+        private readonly ISpotifyApiService _spotifyApiService;
+        private readonly ISpotifyStorageService _spotifyStorageService;
+        private readonly EncryptionHelper _encryptionHelper;
 
-        public SpotifyAuthController(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public SpotifyAuthController(ISpotifyApiService spotifyApiService, EncryptionHelper encryptionHelper, ISpotifyStorageService spotifyStorageService)
         {
-            _httpClientFactory = httpClientFactory;
-            _configuration = configuration;
+            _spotifyApiService = spotifyApiService;
+            _encryptionHelper = encryptionHelper;
+            _spotifyStorageService = spotifyStorageService;
         }
 
         [HttpPost("token")]
@@ -27,58 +32,33 @@ namespace groove_glass_api.Controllers
             {
                 return BadRequest("Spotify authorization code missing");
             }
-
-            var clientId = _configuration["Spotify:ClientId"];
-            var clientSecret = _configuration["Spotify:ClientSecret"];
-            var redirectUri = _configuration["Spotify:RedirectUri"];
-
-            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-            {
-                return StatusCode(500, "Server configuration error: Spotify credentials not set.");
-            }
-
-            var client = _httpClientFactory.CreateClient();
-            var spotifyTokenUrl = "https://accounts.spotify.com/api/token";
-
-            var authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authHeader);
-
-            var requestBody = new Dictionary<string, string>
-            {
-                { "grant_type", "authorization_code" },
-                { "code", request.Code },
-                { "redirect_uri", redirectUri }
-            };
-
-            var content = new FormUrlEncodedContent(requestBody);
-
             try
             {
-                var response = await client.PostAsync(spotifyTokenUrl, content);
+                var result = await _spotifyApiService.ExchangeCodeAndGetProfileAsync(request.Code);
 
-                if (response.IsSuccessStatusCode)
+                if (result == null)
                 {
-                    var responseString = await response.Content.ReadAsStringAsync();
-                    var tokenResponse = JsonSerializer.Deserialize<SpotifyTokenResponse>(responseString);
-
-                    return Ok(tokenResponse);
-                } 
-                else
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Spotify API Error: {errorContent}"); // Log this properly
-                    return StatusCode((int)response.StatusCode, "Failed to retrieve token from Spotify.");
+                    return NotFound("Spotify user not found");
                 }
 
+                var user = new SpotifyUser
+                {
+                    SpotifyUserId = result.SpotifyUserId,
+                    DisplayName = result.DisplayName,
+                    EncryptedAccessToken = _encryptionHelper.EncryptString(result.Token.AccessToken),
+                    EncryptedRefreshToken = _encryptionHelper.EncryptString(result.Token.RefreshToken),
+                    TokenExpiration = DateTime.UtcNow.AddSeconds(result.Token.ExpiresIn)
+                };
+
+                await _spotifyStorageService.StoreOrUpdateUserAsync(user);
+
+                return Ok(result);
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                Console.WriteLine($"Request exception: {ex.Message}"); // Log this properly
-                return StatusCode(500, "An error occurred while communicating with Spotify.");
+                // Log ex.Message properly in production
+                return StatusCode(500, $"Error: {ex.Message}");
             }
-
         }
-
-
     }
 }

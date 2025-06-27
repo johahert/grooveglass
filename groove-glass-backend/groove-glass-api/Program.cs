@@ -23,6 +23,10 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<SpotifyDatabaseContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddScoped<DatabaseService.Services.Interfaces.ISpotifyStorageService, DatabaseService.Services.Implementations.SpotifyStorageService>();
+builder.Services.AddScoped<groove_glass_api.Services.Interfaces.ISpotifyApiService, groove_glass_api.Services.Implementations.SpotifyApiService>();
+builder.Services.AddScoped<groove_glass_api.Util.EncryptionHelper>();
+
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

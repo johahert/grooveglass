@@ -21,7 +21,7 @@ public class SpotifyStorageServiceTests
     {
         var context = GetInMemoryDbContext();
         var service = new SpotifyStorageService(context);
-        var user = new User
+        var user = new SpotifyUser
         {
             SpotifyUserId = "user1",
             DisplayName = "Test User",
@@ -41,7 +41,7 @@ public class SpotifyStorageServiceTests
     {
         var context = GetInMemoryDbContext();
         var service = new SpotifyStorageService(context);
-        var user = new User
+        var user = new SpotifyUser
         {
             SpotifyUserId = "user2",
             DisplayName = "Original",
@@ -66,7 +66,7 @@ public class SpotifyStorageServiceTests
     public async Task GetUserAsync_ReturnsUserIfExists()
     {
         var context = GetInMemoryDbContext();
-        var user = new User
+        var user = new SpotifyUser
         {
             SpotifyUserId = "user3",
             DisplayName = "User 3",
