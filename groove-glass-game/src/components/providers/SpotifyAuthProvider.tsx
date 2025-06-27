@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 const SPOTIFY_CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const SPOTIFY_REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI;
+const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
 const SPOTIFY_SCOPES = [
   "user-read-private",
   "user-read-email",
@@ -39,16 +40,21 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
 
     const exchangeCodeForToken = async (code) => {
         console.log("Sending code to backend to be exchanged for a token.");
-        // In a real app, this is where you would make a POST request to your C# backend.
-        // The backend would then securely exchange the code for an access token.
         try {
-            // !! PSEUDO-CODE for backend call !!
-            // const response = await fetch('https://your-backend.com/api/spotify/token', { ... });
-            // const data = await response.json();
-            // setSpotifyToken(data.access_token);
-            
-            alert("Login successful! Check the console. You would now be logged in.");
-            setSpotifyToken("DUMMY_TOKEN_REPRESENTING_SUCCESSFUL_LOGIN");
+            const response = await fetch(`${BACKEND_BASE_URL}/spotify/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to exchange code for token');
+            }
+            setSpotifyToken(data.access_token);
+            console.log("Spotify Token received:", data.access_token);
+
         } catch (error) {
             console.error("Error exchanging code for token:", error);
             alert("An error occurred during login. Please try again.");
