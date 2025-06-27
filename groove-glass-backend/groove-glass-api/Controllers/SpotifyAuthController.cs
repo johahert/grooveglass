@@ -20,7 +20,7 @@ namespace groove_glass_api.Controllers
             _configuration = configuration;
         }
 
-        [HttpPost("Token")]
+        [HttpPost("token")]
         public async Task<IActionResult> GetToken([FromBody] TokenRequest request)
         {
             if (string.IsNullOrEmpty(request.Code))
@@ -28,7 +28,7 @@ namespace groove_glass_api.Controllers
                 return BadRequest("Spotify authorization code missing");
             }
 
-            var clientId = _configuration["Spotify:ClientuId"];
+            var clientId = _configuration["Spotify:ClientId"];
             var clientSecret = _configuration["Spotify:ClientSecret"];
             var redirectUri = _configuration["Spotify:RedirectUri"];
 

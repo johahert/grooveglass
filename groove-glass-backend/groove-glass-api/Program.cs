@@ -1,3 +1,6 @@
+using DatabaseService.Models;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
@@ -16,6 +19,9 @@ builder.Services.AddCors(options =>
                       });
 });
 // Add services to the container.
+
+builder.Services.AddDbContext<SpotifyDatabaseContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
