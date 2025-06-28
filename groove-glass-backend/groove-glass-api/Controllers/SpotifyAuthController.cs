@@ -78,5 +78,36 @@ namespace groove_glass_api.Controllers
                 return StatusCode(500, $"Error: {ex.Message}");
             }
         }
+
+        [Authorize]
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchTracks([FromQuery] string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return BadRequest("Query is required.");
+
+            // 1. Get user ID from JWT
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                       ?? User.FindFirst("sub")?.Value; foreach (var claim in User.Claims)
+                Console.WriteLine($"{claim.Type}: {claim.Value}");
+            if (string.IsNullOrEmpty(userId))
+            {
+                Console.WriteLine("User ID not found in JWT");
+                return Unauthorized();
+            }
+
+            // 2. Get user's Spotify access token from DB
+            var user = await _spotifyStorageService.GetUserAsync(userId);
+            if (user == null)
+                return Unauthorized();
+
+            var accessToken = _encryptionHelper.DecryptString(user.EncryptedAccessToken);
+
+            // 3. Call Spotify Search API
+            var results = await _spotifyApiService.SearchTracksAsync(query, accessToken, 10);
+
+            // 4. Return results
+            return Ok(results); // results should be a list of song info (id, name, artist, etc.)
+        }
     }
 }

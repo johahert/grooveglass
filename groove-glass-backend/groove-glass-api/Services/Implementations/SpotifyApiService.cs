@@ -92,5 +92,29 @@ namespace groove_glass_api.Services.Implementations
         {
             throw new NotImplementedException();
         }
+
+        public async Task<List<string>> SearchTracksAsync(string query, string accessToken, int v)
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            var searchUrl = $"https://api.spotify.com/v1/search?q={Uri.EscapeDataString(query)}&type=track&limit={v}";
+            var response = await client.GetAsync(searchUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Spotify search error: {errorContent}");
+            }
+            var responseString = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(responseString);
+            var root = doc.RootElement;
+            var tracks = root.GetProperty("tracks").GetProperty("items");
+            var trackList = new List<string>();
+            foreach (var track in tracks.EnumerateArray())
+            {
+                var trackstring = track.ToString();
+                trackList.Add(trackstring);
+            }
+            return trackList;
+        }
     }
 }
