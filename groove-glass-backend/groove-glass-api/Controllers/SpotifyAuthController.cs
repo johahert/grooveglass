@@ -1,12 +1,11 @@
 ﻿using DatabaseService.Models.Entities;
 using DatabaseService.Services.Interfaces;
 using groove_glass_api.Models;
+using groove_glass_api.Models.Frontend;
 using groove_glass_api.Services.Interfaces;
 using groove_glass_api.Util;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading.Tasks;
 
 namespace groove_glass_api.Controllers
 {
@@ -25,8 +24,13 @@ namespace groove_glass_api.Controllers
             _spotifyStorageService = spotifyStorageService;
         }
 
+        /// <summary>
+        /// Stores the Spotify user profile and returns a JWT token.
+        /// </summary>
+        /// <param name="request">Access code</param>
+        /// <returns>Spotify display name and jwt token</returns>
         [HttpPost("token")]
-        public async Task<IActionResult> GetToken([FromBody] TokenRequest request)
+        public async Task<IActionResult> LoginSpotifyUser([FromBody] TokenRequest request)
         {
             if (string.IsNullOrEmpty(request.Code))
             {
@@ -41,7 +45,7 @@ namespace groove_glass_api.Controllers
                     return NotFound("Spotify user not found");
                 }
 
-                var user = new SpotifyUser
+                var userToStore = new SpotifyUser
                 {
                     SpotifyUserId = result.SpotifyUserId,
                     DisplayName = result.DisplayName,
@@ -50,9 +54,23 @@ namespace groove_glass_api.Controllers
                     TokenExpiration = DateTime.UtcNow.AddSeconds(result.Token.ExpiresIn)
                 };
 
-                await _spotifyStorageService.StoreOrUpdateUserAsync(user);
+                await _spotifyStorageService.StoreOrUpdateUserAsync(userToStore);
 
-                return Ok(result);
+                var user = await _spotifyStorageService.GetUserAsync(result.SpotifyUserId);
+
+                if(user == null)
+                {
+                    return NotFound("Spotify user not found in database");
+                }
+
+                var jwtToken = _encryptionHelper.GenerateJwtToken(user.SpotifyUserId, user.DisplayName);
+
+                return Ok(new SpotifyUserClientResponse
+                {
+                    DisplayName = user.DisplayName,
+                    SpotifyUserId = user.SpotifyUserId,
+                    JwtToken = jwtToken
+                });
             }
             catch (Exception ex)
             {

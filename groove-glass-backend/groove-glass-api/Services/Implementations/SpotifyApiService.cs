@@ -23,7 +23,6 @@ namespace groove_glass_api.Services.Implementations
         public async Task<SpotifyUserProfileResponse> ExchangeCodeAndGetProfileAsync(string code)
         {
             // Get access token
-           
             var tokenResponse = await GetAccessTokenResponseAsync(code);
 
             var client = _httpClientFactory.CreateClient();
@@ -36,11 +35,13 @@ namespace groove_glass_api.Services.Implementations
                 var errorContent = await profileResponse.Content.ReadAsStringAsync();
                 throw new Exception($"Spotify profile error: {errorContent}");
             }
+
             var profileString = await profileResponse.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(profileString);
             var root = doc.RootElement;
             var userId = root.GetProperty("id").GetString();
             var displayName = root.TryGetProperty("display_name", out var dn) ? dn.GetString() : null;
+
             return new SpotifyUserProfileResponse
             {
                 Token = tokenResponse,

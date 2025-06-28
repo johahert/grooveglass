@@ -52,8 +52,8 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
             if (!response.ok) {
                 throw new Error(data.error || 'Failed to exchange code for token');
             }
-            setSpotifyToken(data.access_token);
-            console.log("Spotify Token received:", data.access_token);
+
+            console.log("Received data from backend:", data);
 
         } catch (error) {
             console.error("Error exchanging code for token:", error);

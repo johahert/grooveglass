@@ -2,6 +2,10 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace groove_glass_api.Util
 {
@@ -9,11 +13,15 @@ namespace groove_glass_api.Util
     {
         private readonly IConfiguration _configuration;
         private readonly string _encryptionKey;
+        private readonly string _jwtKey;
+        private readonly string _jwtIssuer;
 
         public EncryptionHelper(IConfiguration configuration)
         {
             _configuration = configuration;
             _encryptionKey = _configuration["EncryptionKey"] ?? throw new ArgumentNullException("EncryptionKey is not set in configuration.");
+            _jwtKey = _configuration["Jwt:Key"];
+            _jwtIssuer = _configuration["Jwt:Issuer"];
         }
 
         // Encrypts a string using AES and returns a base64 string (IV + ciphertext)
@@ -64,6 +72,35 @@ namespace groove_glass_api.Util
             using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
             using var sr = new StreamReader(cs, Encoding.UTF8);
             return sr.ReadToEnd();
+        }
+
+        public string GenerateJwtToken(string userId, string displayName)
+        {
+            var jwtKey = _jwtKey;
+            if (string.IsNullOrEmpty(jwtKey))
+            {
+                throw new ArgumentNullException("Jwt:Key is not set in configuration.");
+            }
+
+            var jwtIssuer = _jwtIssuer;
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            var claims = new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, userId),
+                new Claim("displayName", displayName)
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: jwtIssuer,
+                audience: null,
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(1),
+                signingCredentials: credentials
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
         // Derives a 256-bit key from the provided key string
