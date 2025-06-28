@@ -6,10 +6,11 @@ import { ArrowLeft, Music, Users, Copy, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
+import { log } from "console";
 
 
 const HostQuiz = () => {
-  const { spotifyToken, login } = useSpotifyAuth();
+  const { spotifyUser, login, logout } = useSpotifyAuth();
 
   const [quizCode] = useState("ABC123"); // This would be generated
   const [connectedPlayers, setConnectedPlayers] = useState([
@@ -17,7 +18,6 @@ const HostQuiz = () => {
   ]);
   const [isStarted, setIsStarted] = useState(false);
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
-  const [spotifyUser, setSpotifyUser] = useState(null);
 
   const copyQuizCode = () => {
     navigator.clipboard.writeText(quizCode);
@@ -44,23 +44,11 @@ const HostQuiz = () => {
   };
 
   const connectToSpotify = () => {
-    // In a real app, this would redirect to Spotify OAuth
-    // For demo purposes, we'll simulate the connection
-    setIsSpotifyConnected(true);
-    setSpotifyUser({ name: "John Doe", email: "john@example.com" });
-    toast({
-      title: "Connected to Spotify!",
-      description: "You can now host music quizzes",
-    });
+    
   };
 
   const disconnectSpotify = () => {
-    setIsSpotifyConnected(false);
-    setSpotifyUser(null);
-    toast({
-      title: "Disconnected from Spotify",
-      description: "You'll need to reconnect to host quizzes",
-    });
+    logout(); // Ensure we start fresh
   };
 
   return (
@@ -90,7 +78,7 @@ const HostQuiz = () => {
         </div>
 
         {/* Spotify Connection Section */}
-        {!isSpotifyConnected && (
+        {!spotifyUser && (
           <div className="max-w-6xl mx-auto mb-8">
             <Card className="bg-white/10 backdrop-blur-md border border-white/20">
               <CardHeader className="text-center">
@@ -116,7 +104,7 @@ const HostQuiz = () => {
         )}
 
         {/* Spotify Connected Status */}
-        {isSpotifyConnected && (
+        {spotifyUser && (
           <div className="max-w-6xl mx-auto mb-8">
             <Card className="bg-white/10 backdrop-blur-md border border-white/20">
               <CardContent className="p-4">
@@ -127,7 +115,7 @@ const HostQuiz = () => {
                     </div>
                     <div>
                       <p className="text-white font-medium">Connected to Spotify</p>
-                      <p className="text-white/80 text-sm">{spotifyUser?.name}</p>
+                      <p className="text-white/80 text-sm">{spotifyUser?.displayName}</p>
                     </div>
                   </div>
                   <Button 
