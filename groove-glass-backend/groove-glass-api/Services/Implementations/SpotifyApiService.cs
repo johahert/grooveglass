@@ -14,6 +14,9 @@ namespace groove_glass_api.Services.Implementations
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
 
+        private const string SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
+        private const string SPOTIFY_BASE_URL = "https://api.spotify.com/v1";
+
         public SpotifyApiService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _httpClientFactory = httpClientFactory;
@@ -29,7 +32,7 @@ namespace groove_glass_api.Services.Implementations
 
             // Get user profile
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenResponse.AccessToken);
-            var profileResponse = await client.GetAsync("https://api.spotify.com/v1/me");
+            var profileResponse = await client.GetAsync($"{SPOTIFY_BASE_URL}/me");
             if (!profileResponse.IsSuccessStatusCode)
             {
                 var errorContent = await profileResponse.Content.ReadAsStringAsync();
@@ -56,7 +59,6 @@ namespace groove_glass_api.Services.Implementations
             var clientSecret = _configuration["Spotify:ClientSecret"];
             var redirectUri = _configuration["Spotify:RedirectUri"];
             var client = _httpClientFactory.CreateClient();
-            var spotifyTokenUrl = "https://accounts.spotify.com/api/token";
             var authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authHeader);
             var requestBody = new Dictionary<string, string>
@@ -66,7 +68,7 @@ namespace groove_glass_api.Services.Implementations
                 { "redirect_uri", redirectUri }
             };
             var content = new FormUrlEncodedContent(requestBody);
-            var response = await client.PostAsync(spotifyTokenUrl, content);
+            var response = await client.PostAsync(SPOTIFY_TOKEN_URL, content);
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
@@ -93,26 +95,33 @@ namespace groove_glass_api.Services.Implementations
             throw new NotImplementedException();
         }
 
-        public async Task<List<string>> SearchTracksAsync(string query, string accessToken, int v)
+        public async Task<List<string>> SearchTracksAsync(string query, string accessToken, int limit)
         {
             var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            var searchUrl = $"https://api.spotify.com/v1/search?q={Uri.EscapeDataString(query)}&type=track&limit={v}";
+            var searchUrl = $"{SPOTIFY_BASE_URL}/search?q={Uri.EscapeDataString(query)}&type=track&limit={limit}";
             var response = await client.GetAsync(searchUrl);
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 throw new Exception($"Spotify search error: {errorContent}");
             }
+
             var responseString = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(responseString);
             var root = doc.RootElement;
             var tracks = root.GetProperty("tracks").GetProperty("items");
             var trackList = new List<string>();
+
             foreach (var track in tracks.EnumerateArray())
             {
-                var trackstring = track.ToString();
-                trackList.Add(trackstring);
+                var trackName = track.GetProperty("name").GetString();
+                var trackId = track.GetProperty("id").GetString();
+                var artists = track.GetProperty("artists").EnumerateArray()
+                    .Select(a => a.GetProperty("name").GetString()).ToList();
+                var artistNames = string.Join(", ", artists);
+                trackList.Add($"{trackName} by {artistNames} (ID: {trackId})");
             }
             return trackList;
         }

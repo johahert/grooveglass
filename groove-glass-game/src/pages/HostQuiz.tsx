@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
 import { log } from "console";
+import TrackSearch from "@/components/customui/TrackSearch";
 
 
 const HostQuiz = () => {
@@ -130,6 +131,8 @@ const HostQuiz = () => {
             </Card>
           </div>
         )}
+
+        {spotifyUser && <TrackSearch token={spotifyUser.jwtToken}/>}
 
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8">
           {/* Quiz Code Section */}

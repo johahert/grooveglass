@@ -74,7 +74,11 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
     const value = {
         spotifyUser,
         login: handleLogin,
-        logout: () => setSpotifyUser(null),
+        logout: () => {
+            setSpotifyUser(null);
+            localStorage.removeItem('spotifyUser');
+            window.location.href = SPOTIFY_REDIRECT_URI; 
+        },
     };
 
     return <SpotifyAuthContext.Provider value={value}>{children}</SpotifyAuthContext.Provider>;
