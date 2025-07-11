@@ -1,4 +1,5 @@
 ﻿using groove_glass_api.Models;
+using groove_glass_api.Models.Frontend;
 using groove_glass_api.Services.Interfaces;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http;
@@ -95,7 +96,7 @@ namespace groove_glass_api.Services.Implementations
             throw new NotImplementedException();
         }
 
-        public async Task<List<string>> SearchTracksAsync(string query, string accessToken, int limit)
+        public async Task<List<SpotifyTrackResult>> SearchTracksAsync(string query, string accessToken, int limit)
         {
             var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -112,7 +113,7 @@ namespace groove_glass_api.Services.Implementations
             using var doc = JsonDocument.Parse(responseString);
             var root = doc.RootElement;
             var tracks = root.GetProperty("tracks").GetProperty("items");
-            var trackList = new List<string>();
+            var trackList = new List<SpotifyTrackResult>();
 
             foreach (var track in tracks.EnumerateArray())
             {
@@ -121,7 +122,12 @@ namespace groove_glass_api.Services.Implementations
                 var artists = track.GetProperty("artists").EnumerateArray()
                     .Select(a => a.GetProperty("name").GetString()).ToList();
                 var artistNames = string.Join(", ", artists);
-                trackList.Add($"{trackName} by {artistNames} (ID: {trackId})");
+                trackList.Add(new SpotifyTrackResult
+                {
+                    Title = trackName,
+                    Id = trackId,
+                    Artists = artists
+                });
             }
             return trackList;
         }
