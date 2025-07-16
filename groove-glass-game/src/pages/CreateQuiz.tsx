@@ -6,6 +6,7 @@ import { ArrowLeft, Music } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CreateQuizForm } from "@/components/CreateQuizForm";
 import { AIPromptGenerator } from "@/components/AIPromptGenerator";
+import SpotifyPlayerTest from "@/components/customui/SpotifyPlayerTest";
 
 const CreateQuiz = () => {
   const [showAIGenerator, setShowAIGenerator] = useState(false);
@@ -66,6 +67,7 @@ const CreateQuiz = () => {
 
           {/* Content based on selection */}
           {showAIGenerator ? <AIPromptGenerator /> : <CreateQuizForm />}
+          <SpotifyPlayerTest />
         </div>
       </div>
     </div>

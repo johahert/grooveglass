@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Music } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import TrackSearch from "./customui/TrackSearch";
+import { useSpotifyAuth } from "./providers/SpotifyAuthProvider";
 
 interface Question {
   id: string;
@@ -18,7 +20,8 @@ interface Question {
 export const CreateQuizForm = () => {
   const [quizTitle, setQuizTitle] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
-
+  const { spotifyUser } = useSpotifyAuth();
+  
   const addQuestion = () => {
     const newQuestion: Question = {
       id: Date.now().toString(),
@@ -62,6 +65,17 @@ export const CreateQuizForm = () => {
       title: "Quiz Saved!",
       description: "Your quiz has been created successfully",
     });
+
+    console.log("Quiz Data:", {
+      title: quizTitle,
+      questions: questions.map(q => ({
+        question: q.question,
+        answers: q.answers,
+        correctAnswer: q.correctAnswer,
+        spotifyTrack: q.spotifyTrack
+      }))
+    }
+    )
   };
 
   return (
@@ -118,14 +132,8 @@ export const CreateQuizForm = () => {
               </div>
 
               <div>
-                <Label className="text-white font-medium">Spotify Track (optional)</Label>
-                <Input
-                  type="text"
-                  placeholder="Spotify track ID or URL"
-                  value={question.spotifyTrack}
-                  onChange={(e) => updateQuestion(question.id, 'spotifyTrack', e.target.value)}
-                  className="bg-white/20 border-white/30 text-white placeholder:text-white/60 focus:bg-white/30"
-                />
+                <Label className="text-white font-medium">Spotify Track</Label>
+                <TrackSearch token={spotifyUser.jwtToken} onTrackSelected={(track) => updateQuestion(question.id, 'spotifyTrack', track.id)}/>
               </div>
 
               <div>

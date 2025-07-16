@@ -131,5 +131,59 @@ namespace groove_glass_api.Services.Implementations
             }
             return trackList;
         }
+
+        public Task<bool> PlayTrackAsync(string trackId, string deviceId, string accessToken)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                var playUrl = $"{SPOTIFY_BASE_URL}/me/player/play?device_id={deviceId}";
+                var requestBody = new
+                {
+                    uris = new[] { $"spotify:track:{trackId}" }
+                };
+                var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+                var response = client.PutAsync(playUrl, content).Result;
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = response.Content.ReadAsStringAsync().Result;
+                    throw new Exception($"Spotify play track error: {errorContent}");
+                }
+                return Task.FromResult(true);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return Task.FromResult(false);
+            }
+
+        }
+
+        public async Task<List<SpotifyDeviceResult>> GetAvailableDevicesAsync(string accessToken)
+        {
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+            var response = await httpClient.GetAsync("https://api.spotify.com/v1/me/player/devices");
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+            var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+            var devices = root.GetProperty("devices");
+
+            var results = new List<SpotifyDeviceResult>();
+            foreach (var device in devices.EnumerateArray())
+            {
+                results.Add(new SpotifyDeviceResult
+                {
+                    Id = device.GetProperty("id").GetString(),
+                    Name = device.GetProperty("name").GetString(),
+                    Type = device.GetProperty("type").GetString(),
+                    IsActive = device.GetProperty("is_active").GetBoolean()
+                });
+            }
+            return results;
+        }
     }
 }

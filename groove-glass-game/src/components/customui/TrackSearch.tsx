@@ -12,7 +12,7 @@ interface TrackSearchProps {
     onTrackSelected ?: (track: SpotifyTrackResult) => void;
 } 
 
-const TrackSearch = (token) => {
+const TrackSearch = ({token, onTrackSelected} : TrackSearchProps) => {
     const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
 
     const [query, setQuery] = React.useState("");
@@ -37,25 +37,41 @@ const TrackSearch = (token) => {
         setSearchResults([]);
         setLoading(true);
 
-        console.log("Token:", token.token);
-        console.log(`Searching for tracks with query: ${query}`);
-        const response = await fetch(`${BACKEND_BASE_URL}/spotify/search?query=${query}`, {
-            method: 'GET',
-            headers: {
-            'Content-Type': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token.token}` }),
-            },
-        })
-
-        const data = await response.json();
-        if (!response.ok) {
-            console.error("Error fetching search results:", data);
+        if (!token) {
+            console.error("No token provided for search");
             setLoading(false);
             return;
         }
-        console.log("Search results:", data);
-        setLoading(false);
-        setSearchResults(data);
+
+        try {
+            console.log("Token:", token);
+            console.log(`Searching for tracks with query: ${query}`);
+            const response = await fetch(`${BACKEND_BASE_URL}/spotify/search?query=${query}`, {
+                method: 'GET',
+                headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                },
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error("Error fetching search results:", errorData);
+                setLoading(false);
+                return;
+            }
+
+            const data = await response.json();
+            console.log("Search results:", data);
+            setSearchResults(data);
+            setLoading(false);
+
+        } catch (error) {
+            console.error("Error during search:", error);
+            setLoading(false);
+            return;
+            
+        }
     }
 
     return (
@@ -116,8 +132,14 @@ const TrackSearch = (token) => {
                 {searchResults.map((track) => (
                   <li 
                     className='p-2 hover:bg-black/20 cursor-pointer text-white' 
-                    key={track.id} // Use a unique ID like track.id for the key
-                    onClick={() => setSelectedTrack(track)}
+                    key={track.id} 
+                    onClick={() => {
+                      setSelectedTrack(track)
+                      if (onTrackSelected) {
+                        onTrackSelected(track);
+                      }
+                    }
+                  }
                   >
                     <h5 className='font-semibold'>{track.title}</h5>
                     <p className='text-white/80'>

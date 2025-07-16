@@ -132,7 +132,6 @@ const HostQuiz = () => {
           </div>
         )}
 
-        {spotifyUser && <TrackSearch token={spotifyUser.jwtToken}/>}
 
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8">
           {/* Quiz Code Section */}

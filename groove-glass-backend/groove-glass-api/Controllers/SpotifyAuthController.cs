@@ -88,8 +88,11 @@ namespace groove_glass_api.Controllers
 
             // 1. Get user ID from JWT
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                       ?? User.FindFirst("sub")?.Value; foreach (var claim in User.Claims)
+                       ?? User.FindFirst("sub")?.Value; 
+            
+            foreach (var claim in User.Claims)
                 Console.WriteLine($"{claim.Type}: {claim.Value}");
+
             if (string.IsNullOrEmpty(userId))
             {
                 Console.WriteLine("User ID not found in JWT");
@@ -108,6 +111,86 @@ namespace groove_glass_api.Controllers
 
             // 4. Return results
             return Ok(results); // results should be a list of song info (id, name, artist, etc.)
+        }
+
+        [Authorize]
+        [HttpGet("access-token")]
+        public async Task<IActionResult> GetAccessToken()
+        {
+            // Get user ID from JWT
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                       ?? User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                Console.WriteLine("User ID not found in JWT");
+                return Unauthorized();
+            }
+
+            // Get user's Spotify access token from DB
+            var user = await _spotifyStorageService.GetUserAsync(userId);
+            if (user == null)
+                return Unauthorized();
+
+            var accessToken = _encryptionHelper.DecryptString(user.EncryptedAccessToken);
+
+            // Return the decrypted access token
+            return Ok(new { AccessToken = accessToken });
+        }
+
+        [Authorize]
+        [HttpPost("play")]
+        public async Task<IActionResult> PlayTrack([FromBody] PlayTrackRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.TrackId))
+                return BadRequest("TrackId is required.");
+
+            // 1. Get user ID from JWT
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                       ?? User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            // 2. Get user's Spotify access token from DB
+            var user = await _spotifyStorageService.GetUserAsync(userId);
+            if (user == null)
+                return Unauthorized();
+
+            var accessToken = _encryptionHelper.DecryptString(user.EncryptedAccessToken);
+
+            // 3. Get device ID from request
+            if (string.IsNullOrWhiteSpace(request.DeviceId))
+                return BadRequest("DeviceId is required.");
+
+            // 4. Call Spotify API to play the track
+            var success = await _spotifyApiService.PlayTrackAsync(request.TrackId, request.DeviceId, accessToken);
+
+            if (!success)
+                return StatusCode(500, "Failed to start playback on Spotify.");
+
+            return Ok(new { Message = "Playback started." });
+        }
+
+        [Authorize]
+        [HttpGet("devices")]
+        public async Task<IActionResult> GetAvailableDevices()
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                       ?? User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var user = await _spotifyStorageService.GetUserAsync(userId);
+            if (user == null)
+                return Unauthorized();
+
+            var accessToken = _encryptionHelper.DecryptString(user.EncryptedAccessToken);
+
+            var devices = await _spotifyApiService.GetAvailableDevicesAsync(accessToken);
+
+            return Ok(devices);
         }
     }
 }

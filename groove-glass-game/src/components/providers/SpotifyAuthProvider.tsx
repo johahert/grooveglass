@@ -5,10 +5,14 @@ const SPOTIFY_CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const SPOTIFY_REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI;
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
 const SPOTIFY_SCOPES = [
-  "user-read-private",
-  "user-read-email",
-  "playlist-modify-public",
-  "playlist-modify-private",
+    "user-read-private",
+    "user-read-email",
+    "playlist-modify-public",
+    "playlist-modify-private",
+    "user-read-playback-state",
+    "user-modify-playback-state",
+    "user-read-currently-playing",
+    "streaming",
 ].join(" ");
 
 const SpotifyAuthContext = createContext(null);
@@ -30,7 +34,8 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         }
-       
+        console.log("Spotify User State Initialized:", spotifyUser);
+
     }, []);
 
     const handleLogin = () => {
@@ -71,6 +76,39 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
         }
     };
 
+    const getAccessToken = async (trackId: string): Promise<any> => {
+        try {
+            const token = spotifyUser?.jwtToken;
+            if (!token) {
+                console.error("No token available for playing track");
+                return null;
+            }
+
+            const response = await fetch(`${BACKEND_BASE_URL}/spotify/access-token`, {
+                method: 'GET',
+                headers: {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
+                },
+            })
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error("Error playing track:", errorData);
+            } 
+
+            const data = await response.json();
+
+            console.log("Access Token for track:", data);
+
+            return data;
+
+        } catch (error) {
+            console.error("Error in playTrack:", error);
+            return null;
+        }
+    }
+
     const value = {
         spotifyUser,
         login: handleLogin,
@@ -79,6 +117,7 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
             localStorage.removeItem('spotifyUser');
             window.location.href = SPOTIFY_REDIRECT_URI; 
         },
+        getAccessToken: getAccessToken,
     };
 
     return <SpotifyAuthContext.Provider value={value}>{children}</SpotifyAuthContext.Provider>;

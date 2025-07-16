@@ -33,5 +33,7 @@ namespace groove_glass_api.Services.Interfaces
         /// <returns>A task that represents the asynchronous operation, containing the user's Spotify profile response.</returns>
         Task<Models.SpotifyUserProfileResponse> ExchangeCodeAndGetProfileAsync(string code);
         Task<List<SpotifyTrackResult>> SearchTracksAsync(string query, string accessToken, int v);
+        Task<bool> PlayTrackAsync(string trackId, string deviceId, string accessToken);
+        public Task<List<SpotifyDeviceResult>> GetAvailableDevicesAsync(string accessToken);
     }
 }
