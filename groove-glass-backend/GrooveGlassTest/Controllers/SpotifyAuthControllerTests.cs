@@ -10,11 +10,29 @@ using groove_glass_api.Services.Interfaces;
 using DatabaseService.Services.Interfaces;
 using Microsoft.Extensions.Configuration;
 using groove_glass_api.Models.Frontend;
+using System.Collections.Generic;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using groove_glass_api.Models.Frontend.QuizData;
 
 namespace GrooveGlassTest.Controllers
 {
     public class SpotifyAuthControllerTests
     {
+        private static EncryptionHelper GetEncryptionHelper()
+        {
+            var config = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string>
+                {
+                    {"EncryptionKey", "TestEncryptionKey1234567890"},
+                    {"Jwt:Key", Convert.ToBase64String(new byte[32] { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32 })},
+                    {"Jwt:Issuer", "TestIssuer"}
+                })
+                .Build();
+            return new EncryptionHelper(config);
+        }
+
+
         [Fact]
         public async Task LoginSpotifyUser_ValidCode_ReturnsJwtTokenAndDisplayName()
         {
@@ -28,16 +46,7 @@ namespace GrooveGlassTest.Controllers
             var spotifyApiServiceMock = new Mock<ISpotifyApiService>();
             var spotifyStorageServiceMock = new Mock<ISpotifyStorageService>();
 
-            var config = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string>
-                {
-                    {"EncryptionKey", "TestEncryptionKey1234567890"},
-                    {"Jwt:Key", testJwtKey},
-                    {"Jwt:Issuer", "TestIssuer"}
-                })
-                .Build();
-
-            var encryptionHelper = new EncryptionHelper(config);
+            var encryptionHelper = GetEncryptionHelper();
 
             var tokenResponse = new SpotifyTokenResponse
             {
@@ -88,6 +97,111 @@ namespace GrooveGlassTest.Controllers
             dynamic response = (SpotifyUserClientResponse)okResult.Value;
             Assert.Equal(testDisplayName, response?.DisplayName);
             Assert.False(string.IsNullOrEmpty(response?.JwtToken));
+        }
+
+        [Fact]
+        public async Task CreateQuiz_ValidQuiz_ReturnsOk()
+        {
+            // Arrange
+            var mockStorage = new Mock<ISpotifyStorageService>();
+            var mockApi = new Mock<ISpotifyApiService>();
+            var mockEncryption = GetEncryptionHelper();
+            var controller = new SpotifyAuthController(mockApi.Object, mockEncryption, mockStorage.Object);
+
+            var quizContent = new QuizContent
+            {
+                Title = "Test Quiz",
+                Questions = new List<QuestionContent>
+                {
+                    new QuestionContent
+                    {
+                        Question = "Q1",
+                        Answers = new List<string> { "A", "B", "C" },
+                        CorrectAnswer = 0,
+                        SpotifyTrack = "track1"
+                    }
+                }
+            };
+
+            // Simulate authenticated user
+            var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, "user123")
+            }, "mock"));
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = user }
+            };
+
+            // Act
+            var result = await controller.CreateQuiz(quizContent);
+
+            // Assert
+            mockStorage.Verify(s => s.StoreQuizAsync(It.IsAny<Quiz>()), Times.Once);
+            Assert.IsType<OkObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task CreateQuiz_InvalidQuiz_ReturnsBadRequest()
+        {
+            // Arrange
+            var mockStorage = new Mock<ISpotifyStorageService>();
+            var mockApi = new Mock<ISpotifyApiService>();
+            var mockEncryption = GetEncryptionHelper();
+            var controller = new SpotifyAuthController(mockApi.Object, mockEncryption, mockStorage.Object);
+
+            // Simulate authenticated user
+            var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, "user123")
+            }, "mock"));
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = user }
+            };
+
+            // Act
+            var result = await controller.CreateQuiz(null);
+
+            // Assert
+            Assert.IsType<BadRequestObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task CreateQuiz_Unauthorized_ReturnsUnauthorized()
+        {
+            // Arrange
+            var mockStorage = new Mock<ISpotifyStorageService>();
+            var mockApi = new Mock<ISpotifyApiService>();
+            var mockEncryption = GetEncryptionHelper();
+            var controller = new SpotifyAuthController(mockApi.Object, mockEncryption, mockStorage.Object);
+
+            // No user claims
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal() }
+            };
+
+            var quizContent = new QuizContent
+            {
+                Title = "Test Quiz",
+                Questions = new List<QuestionContent>
+                {
+                    new QuestionContent
+                    {
+                        Question = "Q1",
+                        Answers = new List<string> { "A", "B", "C" },
+                        CorrectAnswer = 0,
+                        SpotifyTrack = "track1"
+                    }
+                }
+            };
+
+            // Act
+            var result = await controller.CreateQuiz(quizContent);
+
+            // Assert
+            Assert.IsType<UnauthorizedResult>(result);
         }
     }
 }

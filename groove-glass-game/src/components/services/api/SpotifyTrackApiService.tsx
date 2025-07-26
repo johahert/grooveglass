@@ -1,3 +1,5 @@
+import { Quiz } from "@/models/interfaces/Quiz";
+
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
 interface PlayTrackRequest {
     trackId: string;
@@ -51,6 +53,36 @@ export const GetSpotifyDevices = async (token: string): Promise<any> => {
 
     } catch (error) {
         console.error("Error in GetSpotifyDevices:", error);
+        throw error;
+    }
+}
+
+export const SaveQuiz = async (quiz: Quiz ,token: string): Promise<any> => {
+    try{
+        if (!quiz.title || quiz.questions.length === 0) {
+            throw new Error("Quiz title and questions are required");
+        }
+
+        const response = await fetch(`${BACKEND_BASE_URL}/spotify/quiz`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify(quiz),
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Error saving quiz:", errorData);
+            throw new Error(errorData.error || 'Failed to save quiz');
+        }
+
+        const data = await response.json();
+        console.log("Quiz saved successfully:", data);
+
+    } catch (error) {
+        console.error("Error saving quiz:", error);
         throw error;
     }
 }

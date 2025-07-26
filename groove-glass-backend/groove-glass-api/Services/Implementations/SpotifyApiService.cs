@@ -91,9 +91,36 @@ namespace groove_glass_api.Services.Implementations
             throw new NotImplementedException();
         }
 
-        public Task<string> RefreshAccessTokenAsync(string refreshToken)
+        public async Task<SpotifyTokenResponse> RefreshAccessTokenAsync(string refreshToken)
         {
-            throw new NotImplementedException();
+            var clientId = _configuration["Spotify:ClientId"];
+            var clientSecret = _configuration["Spotify:ClientSecret"];
+            var tokenEndpoint = "https://accounts.spotify.com/api/token";
+
+            using var httpClient = new HttpClient();
+
+            var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint);
+            var authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", authHeader);
+
+            var postData = new List<KeyValuePair<string, string>>
+            {
+                new("grant_type", "refresh_token"),
+                new("refresh_token", refreshToken)
+            };
+            request.Content = new FormUrlEncodedContent(postData);
+
+            var response = await httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Spotify refresh token error: {errorContent}");
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            var tokenResponse = JsonSerializer.Deserialize<SpotifyTokenResponse>(content);
+
+            return tokenResponse ?? throw new Exception("Failed to deserialize Spotify token response.");
         }
 
         public async Task<List<SpotifyTrackResult>> SearchTracksAsync(string query, string accessToken, int limit)

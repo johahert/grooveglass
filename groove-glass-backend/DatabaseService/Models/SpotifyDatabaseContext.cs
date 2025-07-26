@@ -1,23 +1,16 @@
 ﻿using DatabaseService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DatabaseService.Models
 {
     public class SpotifyDatabaseContext : DbContext
     {
-        public SpotifyDatabaseContext(DbContextOptions options) : base(options)
-        {
-        }
-
-        protected SpotifyDatabaseContext()
+        public SpotifyDatabaseContext(DbContextOptions<SpotifyDatabaseContext> options) : base(options)
         {
         }
 
         public DbSet<SpotifyUser> Users { get; set; }
+        public DbSet<Quiz> Quizzes { get; set; }
+        public DbSet<QuizQuestion> QuizQuestions { get; set; }
     }
 }

@@ -17,7 +17,7 @@ namespace groove_glass_api.Services.Interfaces
         /// </summary>
         /// <param name="refreshToken">The refresh token to use for obtaining a new access token.</param>
         /// <returns>A task that represents the asynchronous operation, containing the new access token.</returns>
-        Task<string> RefreshAccessTokenAsync(string refreshToken);
+        Task<SpotifyTokenResponse> RefreshAccessTokenAsync(string refreshToken);
 
         /// <summary>
         /// Retrieves the user's Spotify profile using the provided access token.

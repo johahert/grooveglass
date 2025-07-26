@@ -35,7 +35,6 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
             }
         }
         console.log("Spotify User State Initialized:", spotifyUser);
-
     }, []);
 
     const handleLogin = () => {

@@ -2,6 +2,7 @@
 using DatabaseService.Services.Interfaces;
 using groove_glass_api.Models;
 using groove_glass_api.Models.Frontend;
+using groove_glass_api.Models.Frontend.QuizData;
 using groove_glass_api.Services.Interfaces;
 using groove_glass_api.Util;
 using Microsoft.AspNetCore.Authorization;
@@ -79,6 +80,11 @@ namespace groove_glass_api.Controllers
             }
         }
 
+        /// <summary>
+        /// Searches tracks on Spotify using the provided query.
+        /// </summary>
+        /// <param name="query"></param>
+        /// <returns></returns>
         [Authorize]
         [HttpGet("search")]
         public async Task<IActionResult> SearchTracks([FromQuery] string query)
@@ -104,7 +110,7 @@ namespace groove_glass_api.Controllers
             if (user == null)
                 return Unauthorized();
 
-            var accessToken = _encryptionHelper.DecryptString(user.EncryptedAccessToken);
+            var accessToken = await GetValidAccessTokenAsync(user);
 
             // 3. Call Spotify Search API
             var results = await _spotifyApiService.SearchTracksAsync(query, accessToken, 10);
@@ -113,6 +119,10 @@ namespace groove_glass_api.Controllers
             return Ok(results); // results should be a list of song info (id, name, artist, etc.)
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         [Authorize]
         [HttpGet("access-token")]
         public async Task<IActionResult> GetAccessToken()
@@ -132,12 +142,17 @@ namespace groove_glass_api.Controllers
             if (user == null)
                 return Unauthorized();
 
-            var accessToken = _encryptionHelper.DecryptString(user.EncryptedAccessToken);
+            var accessToken = await GetValidAccessTokenAsync(user);
 
             // Return the decrypted access token
             return Ok(new { AccessToken = accessToken });
         }
 
+        /// <summary>
+        /// Toggle play/pause for the current track on the user's Spotify device.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         [Authorize]
         [HttpPost("play")]
         public async Task<IActionResult> PlayTrack([FromBody] PlayTrackRequest request)
@@ -157,7 +172,7 @@ namespace groove_glass_api.Controllers
             if (user == null)
                 return Unauthorized();
 
-            var accessToken = _encryptionHelper.DecryptString(user.EncryptedAccessToken);
+            var accessToken = await GetValidAccessTokenAsync(user);
 
             // 3. Get device ID from request
             if (string.IsNullOrWhiteSpace(request.DeviceId))
@@ -173,6 +188,42 @@ namespace groove_glass_api.Controllers
         }
 
         [Authorize]
+        [HttpPost("quiz")]
+        public async Task<IActionResult> CreateQuiz([FromBody] QuizContent quizContent)
+        {
+            if (quizContent == null || quizContent.Questions == null || !quizContent.Questions.Any())
+                return BadRequest("Quiz data is invalid.");
+
+            // Get user ID from JWT
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                       ?? User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var quiz = new Quiz
+            {
+                Title = quizContent.Title,
+                SpotifyUserId = userId,
+                Questions = quizContent.Questions.Select(q => new QuizQuestion
+                {
+                    Question = q.Question,
+                    Answers = q.Answers,
+                    CorrectAnswer = q.CorrectAnswer,
+                    SpotifyTrack = q.SpotifyTrack, 
+                }).ToList()
+            };
+
+            // Store the quiz in the database
+            await _spotifyStorageService.StoreQuizAsync(quiz);
+            return Ok(new { Message = "Quiz created successfully." });
+        }
+
+        /// <summary>
+        /// Retrieves the list of available devices for the authenticated user.
+        /// </summary>
+        /// <returns></returns>
+        [Authorize]
         [HttpGet("devices")]
         public async Task<IActionResult> GetAvailableDevices()
         {
@@ -186,11 +237,38 @@ namespace groove_glass_api.Controllers
             if (user == null)
                 return Unauthorized();
 
-            var accessToken = _encryptionHelper.DecryptString(user.EncryptedAccessToken);
+            var accessToken = await GetValidAccessTokenAsync(user);
 
             var devices = await _spotifyApiService.GetAvailableDevicesAsync(accessToken);
 
             return Ok(devices);
         }
+
+        /// <summary>
+        /// Retrieves a valid access token for the user, refreshing it if necessary.
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        private async Task<string> GetValidAccessTokenAsync(SpotifyUser user)
+        {
+            var now = DateTime.UtcNow;
+            if (user.TokenExpiration <= now.AddMinutes(2))
+            {
+                var refreshToken = _encryptionHelper.DecryptString(user.EncryptedRefreshToken);
+                var newToken = await _spotifyApiService.RefreshAccessTokenAsync(refreshToken);
+                if (newToken == null)
+                {
+                    throw new Exception("Failed to refresh Spotify access token.");
+                }
+                user.EncryptedAccessToken = _encryptionHelper.EncryptString(newToken.AccessToken);
+                user.TokenExpiration = now.AddSeconds(newToken.ExpiresIn);
+                await _spotifyStorageService.StoreOrUpdateUserAsync(user);
+                return newToken.AccessToken;
+            } 
+            return _encryptionHelper.DecryptString(user.EncryptedAccessToken);
+        }
+
+
     }
 }

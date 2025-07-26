@@ -15,5 +15,11 @@ namespace DatabaseService.Services.Interfaces
         /// </summary>
         /// <param name="userId">The Spotify user ID.</param>
         Task<SpotifyUser> GetUserAsync(string UserId);
+
+        /// <summary>
+        /// Stores a quiz in the database.
+        /// </summary>
+        Task StoreQuizAsync(Quiz quiz);
+
     }
 }

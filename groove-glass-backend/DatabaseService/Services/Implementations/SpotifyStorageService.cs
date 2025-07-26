@@ -35,5 +35,11 @@ namespace DatabaseService.Services.Implementations
             }
             await _context.SaveChangesAsync();
         }
+
+        public async Task StoreQuizAsync(Quiz quiz)
+        {
+            _context.Quizzes.Add(quiz);
+            await _context.SaveChangesAsync();
+        }
     }
 }

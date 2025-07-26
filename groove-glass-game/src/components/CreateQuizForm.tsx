@@ -8,20 +8,15 @@ import { Plus, Trash2, Music } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import TrackSearch from "./customui/TrackSearch";
 import { useSpotifyAuth } from "./providers/SpotifyAuthProvider";
+import { Quiz, Question } from "@/models/interfaces/Quiz";
+import { SaveQuiz } from "./services/api/SpotifyTrackApiService";
 
-interface Question {
-  id: string;
-  question: string;
-  answers: string[];
-  correctAnswer: number;
-  spotifyTrack: string;
-}
 
 export const CreateQuizForm = () => {
   const [quizTitle, setQuizTitle] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const { spotifyUser } = useSpotifyAuth();
-  
+
   const addQuestion = () => {
     const newQuestion: Question = {
       id: Date.now().toString(),
@@ -38,14 +33,14 @@ export const CreateQuizForm = () => {
   };
 
   const updateQuestion = (id: string, field: keyof Question, value: any) => {
-    setQuestions(questions.map(q => 
+    setQuestions(questions.map(q =>
       q.id === id ? { ...q, [field]: value } : q
     ));
   };
 
   const updateAnswer = (questionId: string, answerIndex: number, value: string) => {
-    setQuestions(questions.map(q => 
-      q.id === questionId 
+    setQuestions(questions.map(q =>
+      q.id === questionId
         ? { ...q, answers: q.answers.map((a, i) => i === answerIndex ? value : a) }
         : q
     ));
@@ -61,21 +56,28 @@ export const CreateQuizForm = () => {
       return;
     }
 
-    toast({
-      title: "Quiz Saved!",
-      description: "Your quiz has been created successfully",
-    });
-
-    console.log("Quiz Data:", {
+    const quiz: Quiz = {
       title: quizTitle,
-      questions: questions.map(q => ({
-        question: q.question,
-        answers: q.answers,
-        correctAnswer: q.correctAnswer,
-        spotifyTrack: q.spotifyTrack
-      }))
-    }
-    )
+      questions: questions
+    };
+
+    SaveQuiz(quiz, spotifyUser.jwtToken)
+      .then(() => {
+        setQuizTitle("");
+        setQuestions([]);
+        toast({
+          title: "Quiz Saved!",
+          description: "Your quiz has been created successfully",
+        });
+      })
+      .catch((error) => {
+        console.error("Error saving quiz:", error);
+        toast({
+          title: "Error",
+          description: "Failed to save quiz. Please try again.",
+          variant: "destructive",
+        });
+      });
   };
 
   return (
@@ -133,7 +135,7 @@ export const CreateQuizForm = () => {
 
               <div>
                 <Label className="text-white font-medium">Spotify Track</Label>
-                <TrackSearch token={spotifyUser.jwtToken} onTrackSelected={(track) => updateQuestion(question.id, 'spotifyTrack', track.id)}/>
+                <TrackSearch token={spotifyUser.jwtToken} onTrackSelected={(track) => updateQuestion(question.id, 'spotifyTrack', track.id)} />
               </div>
 
               <div>
