@@ -31,9 +31,24 @@ namespace groove_glass_api.Services.Interfaces
         /// </summary>
         /// <param name="code">The authorization code received from Spotify.</param>
         /// <returns>A task that represents the asynchronous operation, containing the user's Spotify profile response.</returns>
-        Task<Models.SpotifyUserProfileResponse> ExchangeCodeAndGetProfileAsync(string code);
+        Task<SpotifyUserProfileResponse> ExchangeCodeAndGetProfileAsync(string code);
+
+        /// <summary>
+        /// Return a list of tracks based on the search query.
+        /// </summary>
         Task<List<SpotifyTrackResult>> SearchTracksAsync(string query, string accessToken, int v);
+
+        /// <summary>
+        /// Toggle playback for the specified device.
+        /// </summary>
         Task<bool> PlayTrackAsync(string trackId, string deviceId, string accessToken);
+
+        /// <summary>
+        /// Retrieves a list of available devices for playback.
+        /// </summary>
+        /// <param name="accessToken"></param>
+        /// <returns></returns>
         public Task<List<SpotifyDeviceResult>> GetAvailableDevicesAsync(string accessToken);
+
     }
 }

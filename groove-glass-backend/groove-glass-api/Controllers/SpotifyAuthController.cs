@@ -102,13 +102,13 @@ namespace groove_glass_api.Controllers
             if (string.IsNullOrEmpty(userId))
             {
                 Console.WriteLine("User ID not found in JWT");
-                return Unauthorized();
+                return Unauthorized(new { ErrorMessage = $"No user id found in jwt token" });
             }
 
             // 2. Get user's Spotify access token from DB
             var user = await _spotifyStorageService.GetUserAsync(userId);
             if (user == null)
-                return Unauthorized();
+                return NotFound(new { ErrorMessage = "No user found in database" });
 
             var accessToken = await GetValidAccessTokenAsync(user);
 
@@ -244,6 +244,26 @@ namespace groove_glass_api.Controllers
             return Ok(devices);
         }
 
+        [Authorize]
+        [HttpGet("quizzes")]
+        public async Task<IActionResult> GetUserQuizzesAsync()
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                       ?? User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var quizzes = await _spotifyStorageService.GetUserQuizzesAsync(userId);
+
+            if (quizzes == null || !quizzes.Any())
+            {
+                return NotFound($"No quizzes were found for this user: {userId}");
+            }
+
+            return Ok(quizzes.ToList());
+        }
+
         /// <summary>
         /// Retrieves a valid access token for the user, refreshing it if necessary.
         /// </summary>
@@ -253,6 +273,7 @@ namespace groove_glass_api.Controllers
         private async Task<string> GetValidAccessTokenAsync(SpotifyUser user)
         {
             var now = DateTime.UtcNow;
+
             if (user.TokenExpiration <= now.AddMinutes(2))
             {
                 var refreshToken = _encryptionHelper.DecryptString(user.EncryptedRefreshToken);
@@ -260,15 +281,21 @@ namespace groove_glass_api.Controllers
                 if (newToken == null)
                 {
                     throw new Exception("Failed to refresh Spotify access token.");
+
                 }
+
                 user.EncryptedAccessToken = _encryptionHelper.EncryptString(newToken.AccessToken);
                 user.TokenExpiration = now.AddSeconds(newToken.ExpiresIn);
+
                 await _spotifyStorageService.StoreOrUpdateUserAsync(user);
+
                 return newToken.AccessToken;
             } 
+
             return _encryptionHelper.DecryptString(user.EncryptedAccessToken);
         }
 
+        
 
     }
 }

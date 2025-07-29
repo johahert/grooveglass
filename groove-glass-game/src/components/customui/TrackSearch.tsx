@@ -55,6 +55,7 @@ const TrackSearch = ({token, onTrackSelected} : TrackSearchProps) => {
             })
 
             if (!response.ok) {
+                console.log(response)
                 const errorData = await response.json();
                 console.error("Error fetching search results:", errorData);
                 setLoading(false);

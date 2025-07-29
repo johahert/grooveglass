@@ -1,12 +1,9 @@
 ﻿using groove_glass_api.Models;
 using groove_glass_api.Models.Frontend;
 using groove_glass_api.Services.Interfaces;
-using Microsoft.Extensions.Configuration;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace groove_glass_api.Services.Implementations
 {
@@ -212,5 +209,6 @@ namespace groove_glass_api.Services.Implementations
             }
             return results;
         }
+       
     }
 }

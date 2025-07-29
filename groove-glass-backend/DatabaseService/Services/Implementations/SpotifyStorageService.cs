@@ -2,6 +2,7 @@
 using DatabaseService.Models.Entities;
 using DatabaseService.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Net.WebSockets;
 
 namespace DatabaseService.Services.Implementations
 {
@@ -17,6 +18,22 @@ namespace DatabaseService.Services.Implementations
         public async Task<SpotifyUser?> GetUserAsync(string userId)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.SpotifyUserId == userId);
+        }
+
+        public async Task<IEnumerable<Quiz>> GetUserQuizzesAsync(string userId)
+        {
+            var existingUser =  await _context.Users.FirstOrDefaultAsync(u => u.SpotifyUserId == userId);
+
+            //TODO - better error handling
+            if (existingUser == null)
+            {
+                return Enumerable.Empty<Quiz>();
+            }
+
+            return await _context.Quizzes
+                .Where(q => q.SpotifyUserId == existingUser.SpotifyUserId)
+                .Include(q => q.Questions)
+                .ToListAsync();
         }
 
         public async Task StoreOrUpdateUserAsync(SpotifyUser user)
