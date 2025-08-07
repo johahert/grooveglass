@@ -5,12 +5,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Music, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useQuizRoomHub } from "@/hooks/useQuizRoomHub";
+import { PlayerInfo } from "@/models/interfaces/QuizPlayer";
 
 const JoinQuiz = () => {
-  const [quizCode, setQuizCode] = useState("");
-  const [playerName, setPlayerName] = useState("");
+  const [quizCode, setQuizCode] = useState<string>("");
+  const [playerName, setPlayerName] = useState<string>("");
+  const navigate = useNavigate();
+
+  const { joinRoom } = useQuizRoomHub({
+      onRoomCreated: () => {},
+      onPlayerJoined: () => {
+        toast({
+          title: "Joined Quiz",
+          description: `You have joined the quiz with code ${quizCode} as ${playerName}`,
+        });
+      },
+      onPlayerLeft: () => {},
+      onStateUpdated: () => {},
+      onRoom: () => {},
+    });
 
   const handleJoinQuiz = () => {
     if (!quizCode || !playerName) {
@@ -22,11 +38,26 @@ const JoinQuiz = () => {
       return;
     }
 
-    // Here you would implement the actual join logic
-    toast({
-      title: "Joining Quiz...",
-      description: `Connecting to quiz ${quizCode} as ${playerName}`,
-    });
+    if (quizCode.length !== 6) {
+      toast({
+        title: "Invalid Quiz Code",
+        description: "Quiz code must be exactly 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const randomId: string = crypto.randomUUID();
+
+    const playerInfo: PlayerInfo = {
+      userId: randomId,
+      displayName: playerName,
+    };
+
+    localStorage.setItem("playerInfo", JSON.stringify(playerInfo));
+
+    navigate(`/quiz/${quizCode.trim().toUpperCase()}`);
+
   };
 
   return (

@@ -1,12 +1,13 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import * as signalR from "@microsoft/signalr";
 
-export const useQuizRoomHub = ({ onRoomCreated, onPlayerJoined, onPlayerLeft, onStateUpdated }) => {
+export const useQuizRoomHub = ({ onRoomCreated, onPlayerJoined, onPlayerLeft, onStateUpdated, onRoom }) => {
+
     const connectionRef = useRef<signalR.HubConnection | null>(null);
 
     useEffect(() => {
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${import.meta.env.VITE_BACKEND_BASE_URL}/quizRoomHub`)
+            .withUrl(`${import.meta.env.VITE_BACKEND_QUIZ_URL}/quizRoomHub`)
             .withAutomaticReconnect()
             .configureLogging(signalR.LogLevel.Information)
             .build();
@@ -15,6 +16,7 @@ export const useQuizRoomHub = ({ onRoomCreated, onPlayerJoined, onPlayerLeft, on
         connection.on("PlayerJoined", onPlayerJoined);
         connection.on("PlayerLeft", onPlayerLeft);
         connection.on("StateUpdated", onStateUpdated);
+        connection.on("Room", onRoom);
 
         connection.start()
             .then(() => {
@@ -23,31 +25,38 @@ export const useQuizRoomHub = ({ onRoomCreated, onPlayerJoined, onPlayerLeft, on
             })
             .catch(err => console.error("Error connecting to quiz room hub:", err));
 
-        connectionRef.current = connection;
-
         return () => {
             connection.stop().catch(err => console.error("Error disconnecting from quiz room hub:", err));
         };
 
-    }, [onRoomCreated, onPlayerJoined, onPlayerLeft, onStateUpdated]);
+    }, [onRoomCreated, onPlayerJoined, onPlayerLeft, onStateUpdated, onRoom]);
 
-    const createRoom = (hostUserId, quizId) => 
+    const createRoom = useCallback((hostUserId: string, quizId: number) => {
         connectionRef.current?.invoke("CreateRoom", hostUserId, quizId);
+    }, []);
 
-    const joinRoom = (roomCode, userId, displayName) =>
-        connectionRef.current.invoke("JoinRoom", roomCode, userId, displayName);
+    const joinRoom = useCallback((roomCode, userId, displayName) => {
+        connectionRef.current?.invoke("JoinRoom", roomCode, userId, displayName);
+    }, []);
 
-    const updateState = (roomCode, newState) =>
-        connectionRef.current.invoke("UpdateState", roomCode, newState);
+    const updateState = useCallback((roomCode, newState) => {
+        connectionRef.current?.invoke("UpdateState", roomCode, newState);
+    }, []);
 
-    const leaveRoom = (roomCode, userId) =>
-        connectionRef.current.invoke("LeaveRoom", roomCode, userId);
+    const leaveRoom = useCallback((roomCode, userId) => {
+        connectionRef.current?.invoke("LeaveRoom", roomCode, userId);
+    }, []);
+
+    const getRoom = useCallback((roomCode) => {
+        connectionRef.current?.invoke("GetRoom", roomCode);
+    }, []);
 
     return {
         createRoom,
         joinRoom,
         updateState,
         leaveRoom,
+        getRoom,
     }
 
 }

@@ -15,7 +15,7 @@ const SPOTIFY_SCOPES = [
     "streaming",
 ].join(" ");
 
-const SpotifyAuthContext = createContext(null);
+export const SpotifyAuthContext = createContext<any>(null);
 
 export function SpotifyAuthProvider({ children }: { children: React.JSX.Element }) {
     const [spotifyUser, setSpotifyUser] = useState<SpotifyUserClientResponse | null>(null);
@@ -110,6 +110,7 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
 
     const value = {
         spotifyUser,
+        isAuthenticated: !!spotifyUser,
         login: handleLogin,
         logout: () => {
             setSpotifyUser(null);

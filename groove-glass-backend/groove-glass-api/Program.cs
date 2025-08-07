@@ -4,6 +4,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using groove_glass_api.Models.QuizRoomModels;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +20,8 @@ builder.Services.AddCors(options =>
                                              "http://localhost:8080",
                                              "http://localhost:3000") // A common port for React dev
                                 .AllowAnyHeader()
-                                .AllowAnyMethod();
+                                .AllowAnyMethod()
+                                .AllowCredentials();
                       });
 });
 // Add services to the container.
@@ -117,5 +119,6 @@ app.UseCors(MyAllowSpecificOrigins);
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<QuizRoomHub>("/quizroomhub");
 
 app.Run();
