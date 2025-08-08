@@ -1,35 +1,60 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
+import { ConnectionStatus } from "@/models/constants/ConnectionStatus";
 
-export const useQuizRoomHub = ({ onRoomCreated, onPlayerJoined, onPlayerLeft, onStateUpdated, onRoom }) => {
+const useLatest = (callback) => {
+  const ref = useRef(callback);
+  useEffect(() => {
+    ref.current = callback;
+  });
+  return ref;
+};
+
+export const useQuizRoomHub = ({ onRoomCreated, onPlayerJoined, onPlayerLeft, onStateUpdated, onRoom, enabled = true }) => {
 
     const connectionRef = useRef<signalR.HubConnection | null>(null);
+    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus.Connecting | ConnectionStatus.Connected | ConnectionStatus.Disconnected>(ConnectionStatus.Connecting);
+
+    const onRoomCreatedRef = useLatest(onRoomCreated);
+    const onPlayerJoinedRef = useLatest(onPlayerJoined);
+    const onPlayerLeftRef = useLatest(onPlayerLeft);
+    const onStateUpdatedRef = useLatest(onStateUpdated);
+    const onRoomRef = useLatest(onRoom);
 
     useEffect(() => {
+        if (!enabled) {
+            setConnectionStatus(ConnectionStatus.Disconnected);
+            return;
+        }
+
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(`${import.meta.env.VITE_BACKEND_QUIZ_URL}/quizRoomHub`)
             .withAutomaticReconnect()
             .configureLogging(signalR.LogLevel.Information)
             .build();
 
-        connection.on("RoomCreated", onRoomCreated);
-        connection.on("PlayerJoined", onPlayerJoined);
-        connection.on("PlayerLeft", onPlayerLeft);
-        connection.on("StateUpdated", onStateUpdated);
-        connection.on("Room", onRoom);
+        connection.on("RoomCreated", (...args) => onRoomCreatedRef.current?.(...args));
+        connection.on("PlayerJoined", (...args) => onPlayerJoinedRef.current?.(...args));
+        connection.on("PlayerLeft", (...args) => onPlayerLeftRef.current?.(...args));
+        connection.on("StateUpdated", (...args) => onStateUpdatedRef.current?.(...args));
+        connection.on("Room", (...args) => onRoomRef.current?.(...args));
 
         connection.start()
             .then(() => {
                 console.log("Connected to quiz room hub");
                 connectionRef.current = connection;
+                setConnectionStatus(ConnectionStatus.Connected);
             })
-            .catch(err => console.error("Error connecting to quiz room hub:", err));
+            .catch(err => {
+                console.error("Error connecting to quiz room hub:", err);
+                setConnectionStatus(ConnectionStatus.Disconnected);
+            });
 
         return () => {
             connection.stop().catch(err => console.error("Error disconnecting from quiz room hub:", err));
         };
 
-    }, [onRoomCreated, onPlayerJoined, onPlayerLeft, onStateUpdated, onRoom]);
+    }, [enabled]);
 
     const createRoom = useCallback((hostUserId: string, quizId: number) => {
         connectionRef.current?.invoke("CreateRoom", hostUserId, quizId);
@@ -47,7 +72,7 @@ export const useQuizRoomHub = ({ onRoomCreated, onPlayerJoined, onPlayerLeft, on
         connectionRef.current?.invoke("LeaveRoom", roomCode, userId);
     }, []);
 
-    const getRoom = useCallback((roomCode) => {
+    const getRoom = useCallback((roomCode: string) => {
         connectionRef.current?.invoke("GetRoom", roomCode);
     }, []);
 
@@ -57,6 +82,7 @@ export const useQuizRoomHub = ({ onRoomCreated, onPlayerJoined, onPlayerLeft, on
         updateState,
         leaveRoom,
         getRoom,
+        connectionStatus
     }
 
 }

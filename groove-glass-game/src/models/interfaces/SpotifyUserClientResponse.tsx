@@ -1,6 +1,5 @@
 export interface SpotifyUserClientResponse {
     jwtToken: string;
-    userId: string;
+    spotifyUserId: string;
     displayName: string;
-    expirationDate: string;
 }

@@ -261,7 +261,12 @@ namespace groove_glass_api.Controllers
                 return NotFound($"No quizzes were found for this user: {userId}");
             }
 
-            return Ok(quizzes.ToList());
+            return Ok(quizzes.Select(quiz => new
+            {
+                quiz.Id, 
+                quiz.Title
+            })
+            .ToList());
         }
 
         /// <summary>
@@ -294,8 +299,6 @@ namespace groove_glass_api.Controllers
 
             return _encryptionHelper.DecryptString(user.EncryptedAccessToken);
         }
-
-        
 
     }
 }

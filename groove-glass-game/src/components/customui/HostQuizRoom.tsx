@@ -10,7 +10,7 @@ const HostQuizRoom = () => {
     const [room, setRoom] = useState<QuizRoom | null>(null);
     const [players, setPlayers] = useState<PlayerInfo[]>([]); // Initialize with []
     const [quizState, setQuizState] = useState(null);
-    
+
 
     const { spotifyUser } = useSpotifyAuth();
 
@@ -40,6 +40,7 @@ const HostQuizRoom = () => {
         onPlayerJoined,
         onPlayerLeft,
         onStateUpdated,
+        onRoom: (room: QuizRoom) => {}
     });
 
     useEffect(() => {
@@ -50,7 +51,8 @@ const HostQuizRoom = () => {
     }, [room, spotifyUser, joinRoom]);
 
     return (
-        <Card className="w-full max-w-lg bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl p-2 px-4 mt-4 text-white">
+        <div className='grid grid-cols-2 gap-4'>
+        <Card className="w-full  bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl p-2 px-4 mt-4 text-white">
             <h1>Host Quiz Room</h1>
             {spotifyUser && (
                 <button onClick={() => createRoom(spotifyUser.id, 123)}>
@@ -66,7 +68,7 @@ const HostQuizRoom = () => {
                         <>
                             <h3>Connected players: {players.length}</h3>
                             {players.map(player => (
-                                <h4 key={player.userId}> {/* Added a key for React */}
+                                <h4 key={player.userId}> 
                                     {player.displayName}
                                 </h4>
                             ))}
@@ -75,6 +77,10 @@ const HostQuizRoom = () => {
                 </div>
             )}
         </Card>
+        <Card className='w-full bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl p-2 px-4 mt-4 text-white'>
+
+        </Card>
+        </div>
     );
 };
 

@@ -10,6 +10,11 @@ export interface Question {
     spotifyTrack: string;
 }   
 
+export interface QuizOption {
+    id: number;
+    title: string;
+}
+
 export const SampleQuiz: Quiz = {
     title: "Sample Quiz",
     questions: [

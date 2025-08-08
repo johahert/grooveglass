@@ -1,4 +1,4 @@
-import { Quiz } from "@/models/interfaces/Quiz";
+import { Quiz, QuizOption } from "@/models/interfaces/Quiz";
 
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
 interface PlayTrackRequest {
@@ -57,8 +57,8 @@ export const GetSpotifyDevices = async (token: string): Promise<any> => {
     }
 }
 
-export const SaveQuiz = async (quiz: Quiz ,token: string): Promise<any> => {
-    try{
+export const SaveQuiz = async (quiz: Quiz, token: string): Promise<any> => {
+    try {
         if (!quiz.title || quiz.questions.length === 0) {
             throw new Error("Quiz title and questions are required");
         }
@@ -86,3 +86,30 @@ export const SaveQuiz = async (quiz: Quiz ,token: string): Promise<any> => {
         throw error;
     }
 }
+
+export const GetQuizzes = async (token: string): Promise<QuizOption[]> => {
+    try {
+        if(!token) throw new Error("No token provided");
+
+        const response = await fetch(`${BACKEND_BASE_URL}/spotify/quizzes`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+        });
+
+        if(!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData || "Could not fetch quizzes");
+        }
+
+        const data: QuizOption[] = await response.json();
+        return data;
+
+    } catch (err){
+        console.error(err);        
+    }
+}
+
+//TODO - dedicated error handler

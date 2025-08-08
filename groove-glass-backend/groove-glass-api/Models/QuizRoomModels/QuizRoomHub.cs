@@ -119,14 +119,14 @@ namespace groove_glass_api.Models.QuizRoomModels
 
         }
 
-        public Task GetRoom(string roomCode)
+        public async Task GetRoom(string roomCode)
         {
             if (_rooms.TryGetValue(roomCode, out var room))
             {
-                return Task.FromResult(room);
+                await Clients.Caller.SendAsync("Room", room);
             }
 
-            return Task.FromResult<QuizRoom>(null);
+            await Task.CompletedTask;
 
         }
 

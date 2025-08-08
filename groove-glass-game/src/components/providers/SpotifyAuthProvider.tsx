@@ -19,22 +19,28 @@ export const SpotifyAuthContext = createContext<any>(null);
 
 export function SpotifyAuthProvider({ children }: { children: React.JSX.Element }) {
     const [spotifyUser, setSpotifyUser] = useState<SpotifyUserClientResponse | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('spotifyUser');
-        if (storedUser) {
-            console.log("Found stored Spotify user in localStorage.");
-            setSpotifyUser(JSON.parse(storedUser));
-        } else {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get("code");
-            if(code){
-                console.log("Spotify Auth Code: ", code);
-                exchangeCodeForToken(code);
-                window.history.replaceState({}, document.title, window.location.pathname);
+        const checkAuth = async () => {
+            const storedUser = localStorage.getItem('spotifyUser');
+            if (storedUser) {
+                console.log("Found stored Spotify user in localStorage.");
+                setSpotifyUser(JSON.parse(storedUser));
+                setLoading(false);
+            } else {
+                const urlParams = new URLSearchParams(window.location.search);
+                const code = urlParams.get("code");
+                if(code){
+                    console.log("Spotify Auth Code: ", code);
+                    await exchangeCodeForToken(code);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+                setLoading(false);
             }
-        }
-        console.log("Spotify User State Initialized:", spotifyUser);
+            console.log("Spotify User State Initialized:", spotifyUser);
+        };
+        checkAuth();
     }, []);
 
     const handleLogin = () => {
@@ -111,6 +117,7 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
     const value = {
         spotifyUser,
         isAuthenticated: !!spotifyUser,
+        loading,
         login: handleLogin,
         logout: () => {
             setSpotifyUser(null);
