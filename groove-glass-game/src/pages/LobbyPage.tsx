@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSignalR } from '@/components/providers/SignalRContextProvider';
+import QuizGameView from '@/components/customui/QuizGameView';
 
 function LobbyPage() {
     const { room, user, leaveRoom, startGame } = useSignalR();
@@ -15,6 +16,10 @@ function LobbyPage() {
 
     if (!room || !user) {
         return <div>Loading...</div>; // Show spinner while redirecting or if data is missing
+    }
+
+    if(room.state.isActive) {
+        return <QuizGameView />;
     }
     
     const isHost = user.id === room.hostUserId;

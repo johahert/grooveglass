@@ -12,4 +12,6 @@ export interface SignalRContextType {
     joinRoom(displayName: string, roomCode: string): Promise<void>;
     leaveRoom(): Promise<void>;
     startGame(): Promise<void>;
+    submitAnswer(answerIndex: number): Promise<void>;
+    nextQuestion(): Promise<void>;
 }

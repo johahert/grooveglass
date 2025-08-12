@@ -64,6 +64,13 @@ namespace groove_glass_api.Models.QuizRoomModels
                 }
                 else
                 {
+                    if (room.State.IsActive)
+                    {
+                        Console.WriteLine($"User {displayName} ({userId}) attempted to join active room {roomCode}");
+                        await Clients.Caller.SendAsync("Error", room);
+                        return;
+                    }
+
                     var newPlayer = new PlayerInfo
                     {
                         UserId = userId,

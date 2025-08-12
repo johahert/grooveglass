@@ -1,5 +1,5 @@
 import { PlayerInfo } from "@/models/interfaces/QuizPlayer";
-import { QuizRoom } from "@/models/interfaces/QuizRoom";
+import { QuizRoom, QuizRoomState } from "@/models/interfaces/QuizRoom";
 import { SignalRContextType } from "@/models/interfaces/SignalRContextType";
 import { User } from "@/models/interfaces/User";
 import { HubConnection, HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
@@ -87,6 +87,11 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
             setRoom(prevRoom => prevRoom ? { ...prevRoom, players: prevRoom.players.filter(p => p.userId !== leftPlayer.userId) } : null);
         });
         
+        newConnection.on('Error', (errorMessage: string) => {
+            console.error('SignalR Error:', errorMessage);
+            setError(errorMessage);
+        });
+
         newConnection.on('Room', (roomData: QuizRoom) => {
             console.log('Received room data:', roomData);
             setRoom(roomData);
@@ -140,32 +145,36 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
 
     }, []);
 
+    const updateServerState = async(newState: Partial<QuizRoomState>) => {
+        if (connection && room) {
+            const finalState: QuizRoomState = { ...room.state, ...newState };
+            await connection.invoke("UpdateState", room.roomCode, finalState);
+        }
+    }
+
     const createRoom = async (displayName: string, quizId: number) => {
-        const currentUser = { id: `user_${Date.now()}`, displayName };
+        const currentUser: User = { id: `user_${Date.now()}`, displayName };
         setUser(currentUser);
         sessionStorage.setItem('quizhub_user', JSON.stringify(currentUser));
 
         if (!connection) {
              await connectToHub(currentUser);
+             await new Promise(resolve => setTimeout(resolve, 200));
         }
-        // A small delay to ensure connection is ready before invoking
-        setTimeout(async () => {
-            await connection?.invoke('CreateRoom', currentUser.id, displayName, quizId);
-        }, 100);
+        await connection?.invoke('CreateRoom', currentUser.id, displayName, quizId);
     };
 
     const joinRoom = async (displayName: string, roomCode: string) => {
         const currentUser = { id: `user_${Date.now()}`, displayName };
         setUser(currentUser);
         sessionStorage.setItem('quizhub_user', JSON.stringify(currentUser));
+        sessionStorage.setItem('quizhub_roomcode', roomCode.toUpperCase());
 
         if (!connection) {
             await connectToHub(currentUser, roomCode.toUpperCase());
         } else {
             await connection.invoke('JoinRoom', roomCode.toUpperCase(), currentUser.id, displayName);
-            await connection.invoke('GetRoom', roomCode.toUpperCase());
         }
-        sessionStorage.setItem('quizhub_roomcode', roomCode.toUpperCase());
     };
 
     const leaveRoom = async () => {
@@ -175,8 +184,8 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
             await connection.invoke('LeaveRoom', room.roomCode, user.id);
         }
         setRoom(null);
-        sessionStorage.removeItem('quizhub_roomcode');
-        sessionStorage.removeItem('quizhub_user');
+        setUser(null);
+        sessionStorage.clear();
         navigate('/');
         // Force a full reconnect if they try to join again
         await connection?.stop();
@@ -185,10 +194,38 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
 
     const startGame = async () => {
         if (connection && room && user && room.hostUserId === user.id) {
-            const newState = { ...room.state, isActive: true, currentQuestionIndex: 0 };
-            await connection.invoke("UpdateState", room.roomCode, newState);
+            const newState: QuizRoomState = {
+                isActive: true,
+                currentQuestionIndex: 0,
+                answers: {},
+                questionEndTime: Date.now() + 30000 //30 sec TODO - Change to const or variable
+            }
+            await updateServerState(newState);
         }
     };
+
+    const submitAnswer = async (answerIndex: number) => {
+        if(room && user && room.state.answers[user.id] === undefined) {
+            const newAnswers = { ...room.state.answers, [user.id]: answerIndex };
+            await updateServerState({ answers: newAnswers });
+        }
+    }
+
+    const nextQuestion = async () => {
+        if(room && user && room.hostUserId === user.id && room.quizData && room.state.isActive) {
+            const isLastQuestion = room.state.currentQuestionIndex >= room.quizData.questions.length - 1;
+            if (isLastQuestion) {
+                await updateServerState({ isActive: false, questionEndTime: null });
+            } else {
+                await updateServerState({
+                    currentQuestionIndex: room.state.currentQuestionIndex + 1,
+                    questionEndTime: Date.now() + 30000,
+                    answers: {}
+                });
+            }
+
+        }
+    }
 
     const value: SignalRContextType = {
         connection,
@@ -200,6 +237,8 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
         joinRoom,
         leaveRoom,
         startGame,
+        submitAnswer,
+        nextQuestion
     };
 
     return (
