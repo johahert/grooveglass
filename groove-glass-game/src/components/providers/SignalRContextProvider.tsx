@@ -3,7 +3,7 @@ import { QuizRoom } from "@/models/interfaces/QuizRoom";
 import { SignalRContextType } from "@/models/interfaces/SignalRContextType";
 import { User } from "@/models/interfaces/User";
 import { HubConnection, HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const SignalRContext = createContext<SignalRContextType | undefined>(undefined);
@@ -19,11 +19,18 @@ export const useSignalR = (): SignalRContextType => {
 export const SignalRContextProvider = ({ children }: { children: React.ReactNode }) => {
     const [connection, setConnection] = useState<HubConnection | null>(null);
     const [room, setRoom] = useState<QuizRoom | null>(null);
-    const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
 
+    const [user, _setUser] = useState<User | null>(null);
+    const userRef = useRef<User | null>(null);
+
+    const setUser = (data: User | null) => {
+        userRef.current = data;
+        _setUser(data); 
+    }
+    
     const connectToHub = useCallback(async (currentUser: User, currentRoomCode?: string) => {
         const url = `${import.meta.env.VITE_BACKEND_QUIZ_URL}/quizRoomHub`;
 
@@ -43,6 +50,18 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
 
         newConnection.on('RoomCreated', (roomData: QuizRoom) => {
             console.log('Room Created:', roomData);
+
+            const hostUser = userRef.current;
+            if (hostUser && roomData.hostUserId === hostUser.id) {
+                const hostAsPlayer: PlayerInfo = {
+                    userId: hostUser.id,
+                    displayName: hostUser.displayName,
+                    score: 0,
+                };
+                // Add the host to the players list before setting state.
+                roomData.players = [hostAsPlayer];
+            }
+
             setRoom(roomData);
             sessionStorage.setItem('quizhub_roomcode', roomData.roomCode);
             navigate('/lobby');
@@ -131,7 +150,7 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
         }
         // A small delay to ensure connection is ready before invoking
         setTimeout(async () => {
-            await connection?.invoke('CreateRoom', currentUser.id, quizId);
+            await connection?.invoke('CreateRoom', currentUser.id, displayName, quizId);
         }, 100);
     };
 

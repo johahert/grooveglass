@@ -20,6 +20,7 @@ function HomePage() {
         setIsSubmitting(true);
         try {
             await createRoom(displayName, 1); // Hardcoding quizId to 1
+            
         } catch (e) {
             console.error(e);
         } finally {

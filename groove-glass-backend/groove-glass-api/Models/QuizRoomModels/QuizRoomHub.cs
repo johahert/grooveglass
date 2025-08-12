@@ -9,18 +9,29 @@ namespace groove_glass_api.Models.QuizRoomModels
         private static ConcurrentDictionary<string, QuizRoom> _rooms = new();
         private static ConcurrentDictionary<string, (string roomCode, string userId)> _userConnections = new();
 
-        public async Task CreateRoom(string hostUserId, int quizId)
+        public async Task CreateRoom(string hostUserId, string displayName, int quizId)
         {
             try
             {
                 Console.WriteLine($"Creating room for host user {hostUserId} with quiz ID {quizId}");
                 var roomCode = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
+
+                var hostPlayer = new PlayerInfo
+                {
+                    UserId = hostUserId,
+                    DisplayName = displayName,
+                };
+
+
                 var room = new QuizRoom
                 {
                     RoomCode = roomCode,
                     HostUserId = hostUserId,
                     QuizId = quizId,
-                    Players = new List<PlayerInfo>(), 
+                    Players = new List<PlayerInfo>()
+                    {
+                        hostPlayer
+                    },
                     State = new QuizRoomState() 
                 };
 
