@@ -1,3 +1,4 @@
+import { PlayerInfo } from "@/models/interfaces/QuizPlayer";
 import { QuizRoom } from "@/models/interfaces/QuizRoom";
 import { SignalRContextType } from "@/models/interfaces/SignalRContextType";
 import { User } from "@/models/interfaces/User";
@@ -32,6 +33,14 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
             .configureLogging(LogLevel.Information)
             .build();
 
+        const updatePlayerInRoom = (player: PlayerInfo) => {
+             setRoom(prevRoom => {
+                if (!prevRoom) return null;
+                const newPlayers = prevRoom.players.map(p => p.userId === player.userId ? player : p);
+                return { ...prevRoom, players: newPlayers };
+            });
+        }
+
         newConnection.on('RoomCreated', (roomData: QuizRoom) => {
             console.log('Room Created:', roomData);
             setRoom(roomData);
@@ -44,6 +53,16 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
             setRoom(prevRoom => prevRoom ? { ...prevRoom, players: [...prevRoom.players, newPlayer] } : null);
         });
 
+        newConnection.on('PlayerDisconnected', (disconnectedPlayer: PlayerInfo) => {
+            console.log('Player Disconnected:', disconnectedPlayer.displayName);
+            updatePlayerInRoom(disconnectedPlayer);
+        });
+
+        newConnection.on('PlayerReconnected', (reconnectedPlayer: PlayerInfo) => {
+            console.log('Player Reconnected:', reconnectedPlayer.displayName);
+            updatePlayerInRoom(reconnectedPlayer);
+        });
+
         newConnection.on('PlayerLeft', (leftPlayer) => {
             console.log('Player Left:', leftPlayer);
             setRoom(prevRoom => prevRoom ? { ...prevRoom, players: prevRoom.players.filter(p => p.userId !== leftPlayer.userId) } : null);
@@ -52,7 +71,7 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
         newConnection.on('Room', (roomData: QuizRoom) => {
             console.log('Received room data:', roomData);
             setRoom(roomData);
-            navigate('/lobby');
+            if(roomData) navigate('/lobby');
         });
 
         newConnection.on('RoomNotFound', () => {
@@ -77,7 +96,6 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
             if (currentRoomCode) {
                 console.log(`Attempting to rejoin room ${currentRoomCode}...`);
                 await newConnection.invoke('JoinRoom', currentRoomCode, currentUser.id, currentUser.displayName);
-                await newConnection.invoke('GetRoom', currentRoomCode); // Explicitly request full state
             }
 
         } catch (e) {
@@ -101,9 +119,6 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
             setIsLoading(false);
         }
 
-        return () => {
-            connection?.stop().then(() => console.log("Connection stopped."));
-        };
     }, []);
 
     const createRoom = async (displayName: string, quizId: number) => {
@@ -136,11 +151,17 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
 
     const leaveRoom = async () => {
         if (connection && room && user) {
+            // This is a graceful leave, so we don't need the grace period.
+            // We can add a specific method for this if needed, e.g., "ForceLeaveRoom"
             await connection.invoke('LeaveRoom', room.roomCode, user.id);
         }
         setRoom(null);
         sessionStorage.removeItem('quizhub_roomcode');
+        sessionStorage.removeItem('quizhub_user');
         navigate('/');
+        // Force a full reconnect if they try to join again
+        await connection?.stop();
+        setConnection(null);
     };
 
     const startGame = async () => {

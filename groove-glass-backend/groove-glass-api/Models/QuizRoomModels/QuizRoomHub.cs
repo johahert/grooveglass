@@ -40,15 +40,16 @@ namespace groove_glass_api.Models.QuizRoomModels
         {
             if (_rooms.TryGetValue(roomCode, out var room))
             {
-                var existingPlayer = room.Players.FirstOrDefault(p => p.UserId == userId);
-
                 await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
                 _userConnections[Context.ConnectionId] = (roomCode, userId);
 
+                var existingPlayer = room.Players.FirstOrDefault(p => p.UserId == userId);
+
                 if (existingPlayer != null)
                 {
+                    existingPlayer.IsConnected = true;
                     Console.WriteLine($"Player {existingPlayer.DisplayName} ({userId}) reconnected to room {roomCode}");
-                    await Clients.Caller.SendAsync("RejoinSuccess", existingPlayer);
+                    await Clients.Caller.SendAsync("PlayerReconnected", existingPlayer);
                 }
                 else
                 {
@@ -62,6 +63,8 @@ namespace groove_glass_api.Models.QuizRoomModels
                     Console.WriteLine($"User {displayName} ({userId}) joined room {roomCode} for the first time");
                     await Clients.Group(roomCode).SendAsync("PlayerJoined", newPlayer);
                 }
+
+                await Clients.Caller.SendAsync("Room", room);
             }
             else
             {
@@ -105,13 +108,21 @@ namespace groove_glass_api.Models.QuizRoomModels
                     var player = room.Players.FirstOrDefault(p => p.UserId == info.userId);
                     if (player != null)
                     {
-                        // Option 1: Immediately remove the player.
-                        room.Players.Remove(player);
-                        await Clients.Group(info.roomCode).SendAsync("PlayerLeft", player);
-                        Console.WriteLine($"Player {player.DisplayName} disconnected and was removed from room {info.roomCode}.");
+                        player.IsConnected = false;
+                        Console.WriteLine($"Player {player.DisplayName} disconnected. Starting grace period.");
+                        // Notify clients that the player is attempting to reconnect
+                        await Clients.Group(info.roomCode).SendAsync("PlayerDisconnected", player);
 
-                        // Option 2 (more advanced): Mark them as "disconnected" instead of removing,
-                        // allowing them a grace period to rejoin. For now, removing is simpler.
+                        // Start a 30-second timer. If the player is still disconnected after, remove them.
+                        await Task.Delay(30000).ContinueWith(async t =>
+                        {
+                            if (room.Players.Any(p => p.UserId == player.UserId && !p.IsConnected))
+                            {
+                                room.Players.Remove(player);
+                                await Clients.Group(info.roomCode).SendAsync("PlayerLeft", player);
+                                Console.WriteLine($"Player {player.DisplayName}'s grace period expired. Removed from room.");
+                            }
+                        });
                     }
                 }
             }

@@ -13,6 +13,9 @@ import HostedQuizRoom from "./pages/HostedQuizRoom";
 import NotFound from "./pages/NotFound";
 import { SpotifyAuthProvider } from "./components/providers/SpotifyAuthProvider";
 import RequireSpotifyLogin from "./components/RequireSpotifyLogin";
+import { Signal } from "lucide-react";
+import { SignalRContextProvider } from "./components/providers/SignalRContextProvider";
+import { AppContent } from "./pages/Appcontent";
 
 const queryClient = new QueryClient();
 
@@ -24,22 +27,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/create-quiz" element={<CreateQuiz />} />
-          <Route path="/join-quiz" element={<JoinQuiz />} />
-          <Route path="/host-quiz" element={<HostQuiz />} />
-          {/* Host quiz selection, protected by Spotify login */}
-          <Route path="/host" element={
-            <RequireSpotifyLogin>
-              <HostQuizSelect />
-            </RequireSpotifyLogin>
-          } />
-          {/* Hosted quiz room for host and players */}
-          <Route path="/hostedquiz/:roomCode" element={<HostedQuizRoom />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <SignalRContextProvider>
+          <AppContent/>
+        </SignalRContextProvider>
       </BrowserRouter>
     </TooltipProvider>
     </SpotifyAuthProvider>
