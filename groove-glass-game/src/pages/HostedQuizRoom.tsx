@@ -2,11 +2,13 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/hooks/use-toast";
 import { useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
 import { useQuizRoomHub } from "@/hooks/useQuizRoomHub";
 import type { QuizRoom } from "@/models/interfaces/QuizRoom";
 import { ConnectionStatus } from "@/models/constants/ConnectionStatus";
+import { PlayerInfo } from "@/models/interfaces/QuizPlayer";
+import { getQuizPlayerInfo } from "@/components/services/StorageService";
+import { join } from "path";
 
 
 const HostedQuizRoom = () => {
@@ -17,8 +19,8 @@ const HostedQuizRoom = () => {
   const [isHost, setIsHost] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
 
-  const onPlayerJoined = (playerList: string[]) => {
-    setPlayers(playerList);
+  const onPlayerJoined = (playerInfo: PlayerInfo) => {
+    setPlayers((prev) => [...prev, playerInfo.displayName]);
   };
 
   const onPlayerLeft = (playerList: string[]) => {
@@ -32,6 +34,13 @@ const HostedQuizRoom = () => {
     } else {
       setIsHost(false);
     }
+    
+    const storedPlayerInfo = getQuizPlayerInfo(roomCode);
+    if(roomData.players.some(p => p.userId === storedPlayerInfo?.userId)) {
+      joinRoom(roomCode, storedPlayerInfo?.userId, storedPlayerInfo?.displayName);
+    }
+
+
   };
 
   // Setup SignalR and fetch room info
@@ -52,31 +61,6 @@ const HostedQuizRoom = () => {
       console.log("Fetching room with code:", roomCode);
     }
   }, [roomCode, getRoom, connectionStatus, spotifyUser]);
-
-  // Determine host/player and set playerId
-  /* useEffect(() => {
-    if (!room || !spotifyUser) {
-      console.error("Room or Spotify user not available");
-      return;
-    };
-
-    console.log("Room data:", room);
-
-    if (room.hostUserId === spotifyUser.userId) {
-      setIsHost(true);
-    } else {
-      setIsHost(false);
-      // For players, generate or get playerId from localStorage
-      let pid = localStorage.getItem(`quiz_player_id_${roomCode}`);
-      if (!pid) {
-        pid = Math.random().toString(36).substring(2, 15);
-        localStorage.setItem(`quiz_player_id_${roomCode}`, pid);
-      }
-      setPlayerId(pid);
-      // Optionally join the room as a player
-      joinRoom(roomCode, pid, spotifyUser.displayName || "Player");
-    }
-  }, [room, spotifyUser, roomCode, joinRoom]); */
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600">

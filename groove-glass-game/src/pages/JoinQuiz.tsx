@@ -9,6 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useQuizRoomHub } from "@/hooks/useQuizRoomHub";
 import { PlayerInfo } from "@/models/interfaces/QuizPlayer";
+import { storeQuizPlayerInfo } from "@/components/services/StorageService";
 
 const JoinQuiz = () => {
   const [quizCode, setQuizCode] = useState<string>("");
@@ -47,14 +48,7 @@ const JoinQuiz = () => {
       return;
     }
 
-    const randomId: string = crypto.randomUUID();
-
-    const playerInfo: PlayerInfo = {
-      userId: randomId,
-      displayName: playerName,
-    };
-
-    localStorage.setItem("playerInfo", JSON.stringify(playerInfo));
+    storeQuizPlayerInfo(quizCode.trim().toUpperCase(), playerName.trim());
 
     navigate(`/quiz/${quizCode.trim().toUpperCase()}`);
 
