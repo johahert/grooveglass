@@ -39,7 +39,7 @@ function LobbyPage() {
         <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700">
 
             {room.quizData.questions.length - 1 === room.state.currentQuestionIndex && room.state.currentQuestionIndex !== 0 && !room.state.isActive && (
-                <div className="bg-red-600 p-4 rounded-lg mb-6">
+                <div className="bg-gray-700 p-4 rounded-lg mb-6">
                     <h2 className="text-xl font-bold text-white">Quiz is over!</h2>
                     <p className="text-white">You can now view the final scores.</p>
                     {room.players?.map(player => (

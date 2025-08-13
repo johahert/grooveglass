@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
 import { GetQuizzes } from "@/components/services/api/SpotifyTrackApiService";
 import { QuizOption } from "@/models/interfaces/Quiz";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
-export default function HostQuizSelect({selectedQuiz , setSelectedQuiz}: {selectedQuiz: number | null, setSelectedQuiz: (quizId: number | null) => void}) {
+export default function HostQuizSelect({ selectedQuiz, setSelectedQuiz }: { selectedQuiz: number | null, setSelectedQuiz: (quizId: number | null) => void }) {
   const { spotifyUser } = useSpotifyAuth();
   const [quizzes, setQuizzes] = useState<QuizOption[]>([]);
 
@@ -26,26 +25,32 @@ export default function HostQuizSelect({selectedQuiz , setSelectedQuiz}: {select
   if (!spotifyUser) return null;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600">
-      <Card className="w-full max-w-md bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-white">Select a Quiz to Host</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            {quizzes?.map((quiz) => (
-              <Button
-                key={quiz.id}
-                variant={selectedQuiz === quiz.id ? "default" : "outline"}
-                className={`w-full text-lg ${selectedQuiz === quiz.id ? "bg-gradient-to-r from-pink-400 to-purple-500 text-white" : "bg-white/20 text-white"}`}
-                onClick={() => setSelectedQuiz(quiz.id)}
-              >
-                {quiz.title}
-              </Button>
-            ))}
+      
+      <DropdownMenu>
+        <DropdownMenuTrigger className="w-full p-2 px-4 rounded bg-white/5 text-lg focus:bg-white/10 border border-white/20 hover:bg-white/10">
+          <div className="flex items-center justify-between">
+          {selectedQuiz
+            ? quizzes.find(q => q.id === selectedQuiz)?.title || "Select a quiz..."
+            : "Select a quiz..."}
+            <span className="ml-2 inline-block align-middle">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-full bg-black border border-white/30">
+          {quizzes.map(quiz => (
+            <DropdownMenuItem
+              key={quiz.id}
+              onSelect={() => setSelectedQuiz(quiz.id)}
+              className="bg-black text-white hover:cursor-pointer hover:bg-white/10"
+            >
+              {quiz.title}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
   );
 }

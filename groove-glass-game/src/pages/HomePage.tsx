@@ -69,7 +69,6 @@ function HomePage() {
                 />
             </div>
 
-            {spotifyUser && <HostQuizSelect selectedQuiz={selectedQuiz} setSelectedQuiz={setSelectedQuiz} />}
 
             <div className="grid md:grid-cols-2 gap-8">
                 {/* Join Room Section */}
@@ -96,9 +95,12 @@ function HomePage() {
                 <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 flex flex-col">
                     <h3 className="text-2xl font-semibold mb-4 text-center">Host a Quiz</h3>
                     <p className="text-gray-400 text-center mb-4 flex-grow">Ready to challenge your friends? Create a new room now!</p>
+                    <div className='mb-4'>
+                        <HostQuizSelect selectedQuiz={selectedQuiz} setSelectedQuiz={setSelectedQuiz} />
+                    </div>
                     <button 
                         onClick={handleCreateRoom} 
-                        disabled={isSubmitting || !displayName}
+                        disabled={isSubmitting || !displayName || !selectedQuiz}
                         className="w-full mt-auto bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSubmitting ? 'Creating...' : 'Create New Room'}
