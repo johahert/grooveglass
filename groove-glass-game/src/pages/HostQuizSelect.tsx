@@ -1,52 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
 import { useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
 import { GetQuizzes } from "@/components/services/api/SpotifyTrackApiService";
 import { QuizOption } from "@/models/interfaces/Quiz";
-import { useQuizRoomHub } from "@/hooks/useQuizRoomHub";
-import { QuizRoom } from "@/models/interfaces/QuizRoom";
 
-export default function HostQuizSelect() {
-  const [selectedQuiz, setSelectedQuiz] = useState<number| null>(null);
-  const navigate = useNavigate();
+export default function HostQuizSelect({selectedQuiz , setSelectedQuiz}: {selectedQuiz: number | null, setSelectedQuiz: (quizId: number | null) => void}) {
   const { spotifyUser } = useSpotifyAuth();
   const [quizzes, setQuizzes] = useState<QuizOption[]>([]);
-
-  const onRoomCreated = useCallback((room: QuizRoom) => {
-    const roomCode = room.roomCode;
-    console.log(room);
-    localStorage.set
-    navigate(`/hostedquiz/${roomCode}`);
-  }, []);
-
-  const onPlayerJoined = useCallback(() => {}, []);
-  const onPlayerLeft = useCallback(() => {}, []);
-  const onStateUpdated = useCallback(() => {}, []);
-  const onRoom = useCallback(() => {}, []);
-
-  const { createRoom } = useQuizRoomHub({
-    onRoomCreated,
-    onPlayerJoined,
-    onPlayerLeft,
-    onStateUpdated,
-    onRoom,
-  })
-
-  useEffect(() => {
-    console.log(selectedQuiz)
-  },[selectedQuiz]);
-
-  const handleHost = () => {
-    if (!selectedQuiz) return;
-    // Generate a random 6-char room code
-    if(!spotifyUser?.spotifyUserId){
-      console.error("No used id found");
-      return;
-    }
-    createRoom(spotifyUser?.spotifyUserId, selectedQuiz);
-  };
 
   useEffect(() => {
     const fetchQuizzes = async () => {
@@ -61,6 +22,8 @@ export default function HostQuizSelect() {
     };
     fetchQuizzes();
   }, [spotifyUser]);
+
+  if (!spotifyUser) return null;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600">
@@ -81,13 +44,6 @@ export default function HostQuizSelect() {
               </Button>
             ))}
           </div>
-          <Button
-            onClick={handleHost}
-            disabled={!selectedQuiz}
-            className="w-full bg-gradient-to-r from-pink-400 to-purple-500 text-white text-lg py-6 mt-4"
-          >
-            Host Quiz
-          </Button>
         </CardContent>
       </Card>
     </div>

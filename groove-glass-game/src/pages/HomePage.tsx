@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { useSignalR } from '@/components/providers/SignalRContextProvider';
+import { useSpotifyAuth } from '@/components/providers/SpotifyAuthProvider';
+import HostQuizSelect from './HostQuizSelect';
 
 function HomePage() {
     const { createRoom, joinRoom, error } = useSignalR();
+    const { spotifyUser } = useSpotifyAuth();
     const [displayName, setDisplayName] = useState('');
     const [roomCode, setRoomCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedQuiz, setSelectedQuiz] = useState<number | null>(null);
 
     const handleValidation = () => {
         if (!displayName.trim()) {
@@ -18,8 +22,15 @@ function HomePage() {
     const handleCreateRoom = async () => {
         if (!handleValidation()) return;
         setIsSubmitting(true);
+
+        if (selectedQuiz === null) {
+            alert('Please select a quiz to host.');
+            setIsSubmitting(false);
+            return;
+        }
+
         try {
-            await createRoom(displayName, 1); // Hardcoding quizId to 1
+            await createRoom(displayName, selectedQuiz); // Hardcoding quizId to 1
             
         } catch (e) {
             console.error(e);
@@ -57,6 +68,8 @@ function HomePage() {
                     className="w-full p-4 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                 />
             </div>
+
+            {spotifyUser && <HostQuizSelect selectedQuiz={selectedQuiz} setSelectedQuiz={setSelectedQuiz} />}
 
             <div className="grid md:grid-cols-2 gap-8">
                 {/* Join Room Section */}

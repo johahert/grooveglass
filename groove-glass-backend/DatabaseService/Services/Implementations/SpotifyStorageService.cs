@@ -15,6 +15,14 @@ namespace DatabaseService.Services.Implementations
             _context = context;
         }
 
+        public async Task<Quiz> GetQuizAsync(int quizId)
+        {
+            var quiz = await _context.Quizzes
+                .Include(q => q.Questions)
+                .FirstAsync(q => q.Id == quizId);
+            return quiz;
+        }
+
         public async Task<SpotifyUser?> GetUserAsync(string userId)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.SpotifyUserId == userId);

@@ -1,3 +1,4 @@
+import { toast } from "@/hooks/use-toast";
 import { Quiz, QuizOption } from "@/models/interfaces/Quiz";
 
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
@@ -26,8 +27,7 @@ export const PlaySpotifyTrack = async (trackId: string, deviceId: string, token:
 
     }
     catch (error) {
-        console.error("Error in PlaySpotifyTrack:", error);
-        throw error;
+        handleError(error);
     }
 }
 
@@ -52,8 +52,7 @@ export const GetSpotifyDevices = async (token: string): Promise<any> => {
         return data;
 
     } catch (error) {
-        console.error("Error in GetSpotifyDevices:", error);
-        throw error;
+        handleError(error);
     }
 }
 
@@ -82,8 +81,7 @@ export const SaveQuiz = async (quiz: Quiz, token: string): Promise<any> => {
         console.log("Quiz saved successfully:", data);
 
     } catch (error) {
-        console.error("Error saving quiz:", error);
-        throw error;
+        handleError(error);
     }
 }
 
@@ -108,8 +106,18 @@ export const GetQuizzes = async (token: string): Promise<QuizOption[]> => {
         return data;
 
     } catch (err){
-        console.error(err);        
+        handleError(err);        
     }
+}
+
+const handleError = (error: any) => {
+    console.error("API Error:", error);
+    toast({
+        title: "Error",
+        description: error.message || "An unexpected error occurred.",
+        variant: 'destructive'
+    });
+    throw new Error(error.message || "An error occurred while processing your request.");
 }
 
 //TODO - dedicated error handler

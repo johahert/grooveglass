@@ -22,6 +22,13 @@ namespace DatabaseService.Services.Interfaces
         Task StoreQuizAsync(Quiz quiz);
 
         /// <summary>
+        /// Gets a quiz by its ID.
+        /// </summary>
+        /// <param name="quizId"></param>
+        /// <returns></returns>
+        Task<Quiz> GetQuizAsync(int quizId);
+
+        /// <summary>
         /// Gets all quizzes created by a specific user.
         /// </summary>
         Task<IEnumerable<Quiz>> GetUserQuizzesAsync(string userId);

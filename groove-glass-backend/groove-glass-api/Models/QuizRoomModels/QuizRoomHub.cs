@@ -31,29 +31,20 @@ namespace groove_glass_api.Models.QuizRoomModels
 
                 _userConnections[Context.ConnectionId] = (roomCode, hostUserId);
 
-                var placeholderQuestions = new List<QuizQuestion>
-                {
-                    new QuizQuestion
-                    {
-                        Question = "Placeholder question",
-                        Answers = new List<string> { "Option 1", "Option 2", "Option 3", "Option 4" },
-                        CorrectAnswer = 0
-                    },
-                    new QuizQuestion
-                    {
-                        Question = "Another placeholder question",
-                        Answers = new List<string> { "Answer A", "Answer B", "Answer C", "Answer D" },
-                        CorrectAnswer = 1
-                    }
-                };
+                var quiz = await _spotifyStorageService.GetQuizAsync(quizId);
 
-                var placeholderQuiz = new Quiz
+                if(quiz == null)
                 {
-                    Id = quizId,
-                    Title = "Placeholder Quiz",
-                    SpotifyUserId = hostUserId, 
-                    Questions = placeholderQuestions
-                };
+                    throw new Exception($"Quiz with ID {quizId} not found.");
+                }
+
+                // Avoid circular reference in JSON
+                quiz.Questions = quiz.Questions.Select(x => new QuizQuestion
+                {
+                    Question = x.Question,
+                    Answers = x.Answers,
+                    CorrectAnswer = x.CorrectAnswer
+                }).ToList();
 
                 var room = new QuizRoom
                 {
@@ -65,7 +56,7 @@ namespace groove_glass_api.Models.QuizRoomModels
                         hostPlayer
                     },
                     State = new QuizRoomState(),
-                    QuizData = placeholderQuiz
+                    QuizData = quiz
                 };
 
                 _rooms[roomCode] = room;
