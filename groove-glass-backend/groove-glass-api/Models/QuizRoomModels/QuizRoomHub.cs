@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using DatabaseService.Services.Implementations;
+using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
@@ -22,6 +23,29 @@ namespace groove_glass_api.Models.QuizRoomModels
                     DisplayName = displayName,
                 };
 
+                var placeholderQuestions = new List<QuizQuestion>
+                {
+                    new QuizQuestion
+                    {
+                        Question = "Placeholder question",
+                        Answers = new List<string> { "Option 1", "Option 2", "Option 3", "Option 4" },
+                        CorrectAnswer = 0
+                    },
+                    new QuizQuestion
+                    {
+                        Question = "Another placeholder question",
+                        Answers = new List<string> { "Answer A", "Answer B", "Answer C", "Answer D" },
+                        CorrectAnswer = 1
+                    }
+                };
+
+                var placeholderQuiz = new Quiz
+                {
+                    Id = quizId,
+                    Title = "Placeholder Quiz",
+                    SpotifyUserId = hostUserId, 
+                    Questions = placeholderQuestions
+                };
 
                 var room = new QuizRoom
                 {
@@ -32,7 +56,8 @@ namespace groove_glass_api.Models.QuizRoomModels
                     {
                         hostPlayer
                     },
-                    State = new QuizRoomState() 
+                    State = new QuizRoomState(),
+                    QuizData = placeholderQuiz
                 };
 
                 _rooms[roomCode] = room;
@@ -92,10 +117,17 @@ namespace groove_glass_api.Models.QuizRoomModels
 
         public async Task UpdateState(string roomCode, QuizRoomState newState)
         {
-            if (_rooms.TryGetValue(roomCode, out var room))
+            try
             {
-                room.State = newState;
-                await Clients.Group(roomCode).SendAsync("StateUpdated", newState);
+                if (_rooms.TryGetValue(roomCode, out var room))
+                {
+                    room.State = newState;
+                    await Clients.Group(roomCode).SendAsync("StateUpdated", newState);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in UpdateState: {ex.Message}");
             }
         }
 

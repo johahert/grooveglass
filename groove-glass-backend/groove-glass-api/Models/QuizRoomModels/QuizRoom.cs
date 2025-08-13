@@ -7,4 +7,5 @@ public class QuizRoom
     public int QuizId { get; set; }
     public List<PlayerInfo> Players { get; set; } = new();
     public QuizRoomState State { get; set; }
+    public Quiz? QuizData { get; set; }
 }

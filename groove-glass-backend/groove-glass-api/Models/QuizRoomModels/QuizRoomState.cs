@@ -4,5 +4,7 @@
     {
         public int CurrentQuestionIndex { get; set; }
         public bool IsActive { get; set; }
+        public Dictionary<string, int> Answers { get; set; } = new(); 
+        public long? QuestionEndTime { get; set; }
     }
 }

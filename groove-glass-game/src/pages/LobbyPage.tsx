@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSignalR } from '@/components/providers/SignalRContextProvider';
 import QuizGameView from '@/components/customui/QuizGameView';
+import { toast } from '@/hooks/use-toast';
 
 function LobbyPage() {
     const { room, user, leaveRoom, startGame } = useSignalR();
@@ -26,7 +27,11 @@ function LobbyPage() {
 
     const handleCopyCode = () => {
         navigator.clipboard.writeText(room.roomCode)
-            .then(() => alert('Room code copied to clipboard!'))
+            .then(() => toast({
+                title: 'Room code copied!',
+                description: `Room code ${room.roomCode} has been copied to your clipboard.`,
+                variant: 'destructive'
+            }))
             .catch(err => console.error('Failed to copy text: ', err));
     };
 

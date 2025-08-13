@@ -1,13 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export const Timer = ({ endTime }: { endTime: number }) => {
     const [timeLeft, setTimeLeft] = useState(Math.round((endTime - Date.now()) / 1000));
 
     useEffect(() => {
-        const interval = setInterval(() => {
+        const calculateTimeLeft = () => {
             const newTimeLeft = Math.round((endTime - Date.now()) / 1000);
             setTimeLeft(newTimeLeft > 0 ? newTimeLeft : 0);
-        }, 500);
+        };
+
+        calculateTimeLeft();
+        const interval = setInterval(calculateTimeLeft, 500);
+        
         return () => clearInterval(interval);
     }, [endTime]);
 

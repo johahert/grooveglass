@@ -1,3 +1,4 @@
+import { SampleQuiz } from "@/models/interfaces/Quiz";
 import { PlayerInfo } from "@/models/interfaces/QuizPlayer";
 import { QuizRoom, QuizRoomState } from "@/models/interfaces/QuizRoom";
 import { SignalRContextType } from "@/models/interfaces/SignalRContextType";
