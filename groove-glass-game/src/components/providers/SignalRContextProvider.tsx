@@ -1,3 +1,4 @@
+import { toast } from "@/hooks/use-toast";
 import { SampleQuiz } from "@/models/interfaces/Quiz";
 import { PlayerInfo } from "@/models/interfaces/QuizPlayer";
 import { QuizRoom, QuizRoomState } from "@/models/interfaces/QuizRoom";
@@ -99,6 +100,23 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
             if(roomData) navigate('/lobby');
         });
 
+        newConnection.on('RoomUpdated', (roomData: QuizRoom) => {
+            console.log('Room Updated:', roomData);
+            setRoom(roomData);
+        });
+
+        newConnection.on('RoomClosed' , () => {
+            console.log('Room Closed');
+            setRoom(null);
+            sessionStorage.clear();
+            toast({
+                title: "Room Closed",
+                description: "The room has been closed by the host.",
+                variant: 'destructive'
+            })
+            navigate('/');
+        })
+
         newConnection.on('RoomNotFound', () => {
             console.error('Room not found!');
             setError('The room code is invalid or the room has closed.');
@@ -195,20 +213,13 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
 
     const startGame = async () => {
         if (connection && room && user && room.hostUserId === user.id) {
-            const newState: QuizRoomState = {
-                isActive: true,
-                currentQuestionIndex: 0,
-                answers: {},
-                questionEndTime: Date.now() + 30000 //30 sec TODO - Change to const or variable
-            }
-            await updateServerState(newState);
+            await connection.invoke('RestartQuiz', room.roomCode);
         }
     };
 
     const submitAnswer = async (answerIndex: number) => {
-        if(room && user && room.state.answers[user.id] === undefined) {
-            const newAnswers = { ...room.state.answers, [user.id]: answerIndex };
-            await updateServerState({ answers: newAnswers });
+        if (connection && room) {
+            await connection.invoke('SubmitAnswer', room.roomCode, answerIndex);
         }
     }
 

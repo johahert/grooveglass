@@ -30,13 +30,27 @@ function LobbyPage() {
             .then(() => toast({
                 title: 'Room code copied!',
                 description: `Room code ${room.roomCode} has been copied to your clipboard.`,
-                variant: 'destructive'
+                variant: 'default',
             }))
             .catch(err => console.error('Failed to copy text: ', err));
     };
 
     return (
         <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700">
+
+            {room.quizData.questions.length -1 === room.state.currentQuestionIndex && !room.state.isActive && (
+                <div className="bg-red-600 p-4 rounded-lg mb-6">
+                    <h2 className="text-xl font-bold text-white">Quiz is over!</h2>
+                    <p className="text-white">You can now view the final scores.</p>
+                    {room.players?.map(player => (
+                        <div key={player.userId} className="text-white">
+                            <span className="font-semibold">{player.displayName}: </span>
+                            <span>{player.score ?? 0} points</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             <div className="flex justify-between items-start mb-6">
                 <div>
                     <h2 className="text-3xl font-bold text-white">Lobby</h2>

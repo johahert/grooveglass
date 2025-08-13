@@ -77,9 +77,14 @@ const HostQuizRoom = () => {
                 </div>
             )}
         </Card>
+        
+        {!room?.state?.isActive && room?.state?.currentQuestionIndex === room?.quizData?.questions.length - 1 && 
         <Card className='w-full bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl p-2 px-4 mt-4 text-white'>
-
+            <h2>Quiz Summary</h2>
+            <p>Total Questions: {room?.quizData?.questions.length}</p>
+            <p>Players: {players.length}</p>
         </Card>
+        }
         </div>
     );
 };

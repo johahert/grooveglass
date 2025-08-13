@@ -5,5 +5,6 @@
         public string UserId { get; set; }
         public string DisplayName { get; set; }
         public bool IsConnected { get; set; } = true;
+        public int Score { get; set; } = 0;
     }
 }
