@@ -43,7 +43,8 @@ namespace groove_glass_api.Models.QuizRoomModels
                 {
                     Question = x.Question,
                     Answers = x.Answers,
-                    CorrectAnswer = x.CorrectAnswer
+                    CorrectAnswer = x.CorrectAnswer,
+                    SpotifyTrack = x.SpotifyTrack,
                 }).ToList();
 
                 var room = new QuizRoom

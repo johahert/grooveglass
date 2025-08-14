@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Timer } from './Timer';
 import { useSignalR } from '../providers/SignalRContextProvider';
+import { useSpotifyAuth } from '../providers/SpotifyAuthProvider';
+import { PlaySpotifyTrack } from '../services/api/SpotifyTrackApiService';
 
 function QuizGameView() {
     const { room, user, submitAnswer, nextQuestion } = useSignalR();
-
+    const { spotifyUser } = useSpotifyAuth();
     const [, setForceRender] = useState(0);
 
     const allPlayersAnswered = useMemo(() => {
@@ -24,6 +26,23 @@ function QuizGameView() {
         // Cleanup the interval when the component unmounts.
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        const playTrack = async () => {
+            if (!spotifyUser?.selectedDevice.id) return;
+            console.log("Spotify User Selected Device:", spotifyUser.selectedDevice.id);
+
+            console.log(room?.quizData)
+
+            console.log("Current Question Index:", room?.state?.currentQuestionIndex);
+            const currentTrackId = room?.quizData?.questions[room.state.currentQuestionIndex]?.spotifyTrack;
+            console.log("Current Track ID:", currentTrackId);
+
+            await PlaySpotifyTrack(currentTrackId, spotifyUser?.selectedDevice.id, spotifyUser);
+        }
+        playTrack();
+
+    }, [room?.state?.currentQuestionIndex])
 
     const currentQuestion = useMemo(() => {
         if (!room?.quizData?.questions) return null;
