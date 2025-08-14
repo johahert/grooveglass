@@ -30,7 +30,7 @@ const PlaybackControl = ({ selectedDevice, currentTrack }: PlaybackControlProps)
   };
 
   return (
-    <div className="flex items-center gap-4 mt-4">
+    <div className="flex items-center gap-4 my-4">
       <Button onClick={handlePlay} disabled={isPlaying || loading} className="bg-green-600 hover:bg-green-700 text-white">
         Play
       </Button>

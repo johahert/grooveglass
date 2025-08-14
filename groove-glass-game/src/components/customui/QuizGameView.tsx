@@ -11,6 +11,8 @@ function QuizGameView() {
     const { spotifyUser } = useSpotifyAuth();
     const [, setForceRender] = useState(0);
 
+    const answeredIndex = useMemo(() => room?.state.answers?.[user.id], [room, user]);
+
     const allPlayersAnswered = useMemo(() => {
         if (!room) return false;
         return room.players.length === Object.keys(room.state.answers ?? {}).length;
@@ -35,6 +37,8 @@ function QuizGameView() {
             console.log("Spotify User Selected Device:", spotifyUser.selectedDevice.id);
 
             console.log(room?.quizData)
+
+            console.log(currentQuestion?.correctAnswer)
 
             console.log("Current Question Index:", room?.state?.currentQuestionIndex);
             const currentTrackId = room?.quizData?.questions[room.state.currentQuestionIndex]?.spotifyTrack;
@@ -63,20 +67,20 @@ function QuizGameView() {
     const answerHoverColors = ['hover:bg-red-500', 'hover:bg-blue-500', 'hover:bg-yellow-500', 'hover:bg-green-500'];
 
     return (
-        <div className="p-8 rounded-xl shadow-2xl border border-gray-700">
+        <div className="bg-primary-element p-8 rounded-xl shadow-2xl border border-subtle">
+
             <PlaybackControl
-                selectedDevice={spotifyUser?.selectedDevice.id}
+                selectedDevice={spotifyUser?.selectedDevice?.id}
                 currentTrack={currentQuestion?.spotifyTrack}
             />
-            <SoundwaveBackground isPlaying={true} />
 
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Question {room.state.currentQuestionIndex + 1}</h2>
+            <div className="flex justify-between items-end mb-6 border border-white/10 bg-white/5 p-4 rounded-lg">
+                <div className='h-full flex flex-1 flex-col justify-end'>
+
+                    <h2 className="text-lg text-white/25">Question {room.state.currentQuestionIndex + 1}</h2>
+                    <h3 className="text-3xl">{currentQuestion.question}</h3>
+                </div>
                 {room.state.questionEndTime && !allPlayersAnswered && <Timer endTime={room.state.questionEndTime} />}
-            </div>
-
-            <div className="bg-gray-900 p-6 rounded-lg mb-8 text-center">
-                <h3 className="text-3xl font-semibold">{currentQuestion.question}</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -85,7 +89,9 @@ function QuizGameView() {
                         key={index}
                         onClick={() => submitAnswer(index)}
                         disabled={hasAnswered || isTimeUp}
-                        className={`p-6 text-xl font-semibold rounded-lg transition duration-300 text-white ${answerColors[index]} ${!hasAnswered && !isTimeUp ? answerHoverColors[index] : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+                        className={`p-6 text-xl font-semibold rounded-lg transition duration-300 text-white border border-white/15 ${(
+                            allPlayersAnswered || isTimeUp
+                        ) && index === currentQuestion.correctAnswer ? 'bg-primary-400' : 'bg-white/5 hover:bg-white/10'} ${answeredIndex === index ? 'ring ring-primary-300' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         {answer}
                     </button>

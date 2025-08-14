@@ -15,7 +15,8 @@ export const AppContent = () => {
     }
 
     return (
-        <div className="bg-gray-900 text-white min-h-screen font-sans p-4 sm:p-8">
+        <div className="bg-primary-background  text-white min-h-screen font-sans p-4 sm:p-8 relative">
+            
             <div className="max-w-4xl mx-auto">
                 <SpotifyUserToggle />
                 <header className="text-center mb-12">

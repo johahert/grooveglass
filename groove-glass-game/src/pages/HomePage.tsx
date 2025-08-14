@@ -4,6 +4,7 @@ import { useSpotifyAuth } from '@/components/providers/SpotifyAuthProvider';
 import HostQuizSelect from './HostQuizSelect';
 import { Link } from 'react-router-dom';
 import SpotifyDeviceSelect from '@/components/customui/SpotifyDeviceSelect';
+import CreateQuiz from './CreateQuiz';
 
 function HomePage() {
     const { createRoom, joinRoom, error } = useSignalR();
@@ -57,75 +58,78 @@ function HomePage() {
     };
 
     return (
-        <div className="space-y-12">
+        <div className="space-y-12 ">
             {error && <div className="bg-red-900 border border-red-500 text-red-200 p-4 rounded-lg text-center">{error}</div>}
             
-            <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700">
-                <h2 className="text-3xl font-bold mb-6 text-center text-white">Get Started</h2>
-                <input
-                    type="text"
-                    placeholder="Enter your display name"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full p-4 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-                />
+            <div className="bg-primary-element p-8 rounded-xl shadow-xl border relative border-subtle overflow-hidden">
+                <div className="absolute inset-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                        <div className="rounded-full border-4 border-primary-700 opacity-30 w-[400px] h-[400px] animate-pulse"></div>
+                        <div className="rounded-full border-2 border-primary-600 opacity-20 w-[600px] h-[600px] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+                        <div className="rounded-full border-2 border-primary-700 opacity-10 w-[800px] h-[800px] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+                    </div>
+                </div>
+                <div className="relative z-10">
+                    <h2 className="text-3xl  mb-6 text-primary">Get Started</h2>
+                    <input
+                        type="text"
+                        placeholder="Enter your display name"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="w-full p-4 bg-zinc-800 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none transition shadow-md"
+                    />
+                </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
                 {/* Join Room Section */}
-                <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 flex flex-col">
-                    <h3 className="text-2xl font-semibold mb-4 text-center">Join a Quiz</h3>
-                    <input
-                        type="text"
-                        placeholder="Enter room code"
-                        value={roomCode}
-                        onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                        className="w-full p-4 bg-gray-900 border border-gray-600 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:outline-none transition uppercase"
-                        maxLength={6}
-                    />
-                    <button 
-                        onClick={handleJoinRoom} 
-                        disabled={isSubmitting || !displayName || !roomCode}
-                        className="w-full mt-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isSubmitting ? 'Joining...' : 'Join Room'}
-                    </button>
+                <div>
+                    <div className="bg-primary-element p-8 rounded-xl shadow-xl border border-subtle flex flex-col">
+                        <h3 className="text-2xl mb-4 ">Join a Quiz</h3>
+                        <input
+                            type="text"
+                            placeholder="Enter room code"
+                            value={roomCode}
+                            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                            className="w-full p-4 bg-zinc-800 border border-zinc-700 rounded-lg mb-4 focus:ring-2 focus:ring-primary-500 focus:outline-none transition uppercase"
+                            maxLength={6}
+                            />
+                        <button 
+                            onClick={handleJoinRoom} 
+                            disabled={isSubmitting || !displayName || !roomCode}
+                            className="w-full mt-auto bg-gradient-to-br from-primary-400 to-primary-700 hover:bg-primary-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                            {isSubmitting ? 'Joining...' : 'Join Room'}
+                        </button>
+                    </div>
                 </div>
 
 
                 {/* Create Room Section */}
                 {spotifyUser && (
-                    <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 flex flex-col">
-                        <h3 className="text-2xl font-semibold mb-4 text-center">Host a Quiz</h3>
-                        <p className="text-gray-400 text-center mb-4 flex-grow">Ready to challenge your friends? Create a new room now!</p>
+                    <div className="bg-primary-element p-8 rounded-xl shadow-2xl border border-subtle flex flex-col">
+                        <h3 className="text-2xl mb-4 ">Host a Quiz</h3>
+                        <p className="text-gray-400 mb-4 flex-grow">Ready to challenge your friends? Create a new room now!</p>
                         <div className='mb-4'>
                             <HostQuizSelect selectedQuiz={selectedQuiz} setSelectedQuiz={setSelectedQuiz} />
                         </div>
                         <button 
                             onClick={handleCreateRoom} 
                             disabled={isSubmitting || !displayName || !selectedQuiz}
-                            className="w-full mt-auto bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full mt-auto bg-gradient-to-br from-purple-400 to-purple-700 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSubmitting ? 'Creating...' : 'Create New Room'}
                         </button>
                     </div>
                 )}
 
-                {/* Create Quiz Section */}
-                {spotifyUser && (
-                    <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 flex flex-col">
-                        <h3 className="text-2xl font-semibold mb-4 text-center">Create Your Own Quiz</h3>
-                        <p className="text-gray-400 text-center mb-4 flex-grow">
-                            Want to make a custom quiz? Start building your own!
-                        </p>
-                        <Link
-                            to="/create-quiz"
-                            className="w-full mt-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg text-center transition duration-300"
-                        >
-                            Create Quiz
-                        </Link>
-                    </div>
-                )}
+               
+
+                {spotifyUser && 
+                <div className='col-span-2'>
+                    <CreateQuiz />
+                </div>
+                }
 
                 {!spotifyUser && (
                     <div>

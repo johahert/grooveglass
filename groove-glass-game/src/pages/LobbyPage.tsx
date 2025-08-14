@@ -36,7 +36,7 @@ function LobbyPage() {
     };
 
     return (
-        <div className=" p-8 rounded-xl shadow-2xl border border-gray-700">
+        <div className="p-8 rounded-xl shadow-2xl border border-gray-700">
 
             {room.quizData.questions.length - 1 === room.state.currentQuestionIndex && room.state.currentQuestionIndex !== 0 && !room.state.isActive && (
                 <div className="bg-gray-700 p-4 rounded-lg mb-6">
@@ -66,7 +66,7 @@ function LobbyPage() {
                 </div>
             </div>
 
-            <div className="bg-gray-900 p-6 rounded-lg mb-8">
+            <div className="bg-gray-900 rounded-lg mb-8">
                 <h3 className="text-xl font-semibold mb-4 text-white">Players ({room.players.length})</h3>
                 <ul className="space-y-3">
                     {room.players.map((player) => (

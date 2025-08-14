@@ -24,10 +24,7 @@ export default {
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
-				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
-				},
+				
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
 					foreground: 'hsl(var(--secondary-foreground))'
@@ -61,7 +58,24 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				primary: {
+					'50': '#effefb',
+					'100': '#c8fff2',
+					'200': '#91fee7',
+					'300': '#35f4d2',
+					'400': '#1fe2c5',
+					'500': '#06c6ad',
+					'600': '#029f8e',
+					'700': '#067f72',
+					'800': '#0b645d',
+					'900': '#0e534d',
+					'950': '#003330',
+				},
+				'primary-background': '#0e0e11',
+				'primary-element': '#18181b',
+				'primary-foreground': '#ffffff',
+				'subtle': '#27272a'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -93,4 +107,5 @@ export default {
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
+
 } satisfies Config;

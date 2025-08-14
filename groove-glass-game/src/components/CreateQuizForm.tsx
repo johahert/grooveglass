@@ -61,7 +61,7 @@ export const CreateQuizForm = () => {
       questions: questions
     };
 
-    SaveQuiz(quiz, spotifyUser.jwtToken)
+    SaveQuiz(quiz, spotifyUser)
       .then(() => {
         setQuizTitle("");
         setQuestions([]);
@@ -81,9 +81,9 @@ export const CreateQuizForm = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       {/* Quiz Title */}
-      <Card className="bg-white/10 backdrop-blur-md border border-white/20">
+      <Card className="bg-white/5  border border-white/10">
         <CardHeader>
           <CardTitle className="text-white">Quiz Details</CardTitle>
         </CardHeader>
@@ -99,7 +99,7 @@ export const CreateQuizForm = () => {
                 placeholder="Enter your quiz title"
                 value={quizTitle}
                 onChange={(e) => setQuizTitle(e.target.value)}
-                className="bg-white/20 border-white/30 text-white placeholder:text-white/60 focus:bg-white/30"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:bg-white/15"
               />
             </div>
           </div>
@@ -107,16 +107,17 @@ export const CreateQuizForm = () => {
       </Card>
 
       {/* Questions */}
-      <div className="space-y-4">
+      {questions?.length > 0 && 
+      <div className="space-y-4 ">
         {questions.map((question, index) => (
-          <Card key={question.id} className="bg-white/10 backdrop-blur-md border border-white/20">
+          <Card key={question.id} className="bg-white/5 border border-white/10">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-white">Question {index + 1}</CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => removeQuestion(question.id)}
-                className="text-white hover:bg-white/10"
+                className="text-white hover:bg-white/5"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -129,7 +130,7 @@ export const CreateQuizForm = () => {
                   placeholder="Enter your question"
                   value={question.question}
                   onChange={(e) => updateQuestion(question.id, 'question', e.target.value)}
-                  className="bg-white/20 border-white/30 text-white placeholder:text-white/60 focus:bg-white/30"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:bg-white/15"
                 />
               </div>
 
@@ -165,11 +166,12 @@ export const CreateQuizForm = () => {
           </Card>
         ))}
       </div>
+      }
 
       {/* Add Question Button */}
       <Button
         onClick={addQuestion}
-        className="w-full bg-white/20 border border-white/30 text-white hover:bg-white/30"
+        className="w-full bg-white/10 border border-white/20 text-white hover:bg-white/15"
         variant="outline"
       >
         <Plus className="w-4 h-4 mr-2" />

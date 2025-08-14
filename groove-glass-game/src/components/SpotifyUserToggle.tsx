@@ -13,10 +13,10 @@ const SpotifyUserToggle = () => {
       </div>
       {spotifyUser ? (
         <div className="flex items-center gap-4">
-          <span className="text-white/80">Logged in as <span className="font-bold">{spotifyUser.displayName}</span></span>
+          <span className="text-white/80">Logged in as <span className="font-bold ">{spotifyUser.displayName}</span></span>
           <button
             onClick={logout}
-            className="px-4 py-2 rounded bg-red-500 hover:bg-red-600 text-white font-semibold"
+            className="px-4 py-2 rounded-lg bg-primary-element border border-subtle hover:bg-white/10 text-red-200 "
           >
             Log out
           </button>
@@ -24,7 +24,7 @@ const SpotifyUserToggle = () => {
       ) : (
         <button
           onClick={login}
-          className="px-4 py-2 rounded bg-green-500 hover:bg-green-600 text-white font-semibold"
+          className="px-4 py-2 rounded-lg bg-primary-element border border-subtle hover:bg-white/10 text-primary-200 "
         >
           Log in with Spotify
         </button>
