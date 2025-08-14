@@ -1,7 +1,7 @@
 import { toast } from "@/hooks/use-toast";
 import { Quiz, QuizOption } from "@/models/interfaces/Quiz";
 import { SpotifyUserClientResponse } from "@/models/interfaces/SpotifyUserClientResponse";
-
+import { useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
 interface PlayTrackRequest {
     trackId: string;
@@ -9,38 +9,68 @@ interface PlayTrackRequest {
 }
 
 // Helper to get and refresh JWT token if needed
-export async function fetchWithAuth(input: RequestInfo, init: RequestInit = {}, spotifyUser: any) {
+let isRefreshing = false;
+let refreshPromise: Promise<void> | null = null;
+
+export async function fetchWithAuth(input: RequestInfo, init: RequestInit = {}, spotifyUser: SpotifyUserClientResponse) {
     let jwtToken = spotifyUser.jwtToken;
     let jwtTokenExpiration = spotifyUser.jwtTokenExpiration;
     let jwtRefreshToken = spotifyUser.jwtRefreshToken;
-    let spotifyUserId = spotifyUser.userId;
+    let spotifyUserId = spotifyUser.spotifyUserId;
 
     const nowUtc = Date.now();
     const expirationUtc = new Date(jwtTokenExpiration).getTime();
     const jwtTokenTimeLeft = expirationUtc - nowUtc;
 
+    console.log("JWT token time left (ms):", jwtTokenTimeLeft);
+
     // If token is expired or about to expire (e.g., < 1 min left)
     if (jwtTokenTimeLeft < 60000) {
-        // Call refresh endpoint
-        const resp = await fetch(`${import.meta.env.VITE_BACKEND_BASE_URL}/spotify/refresh-jwt`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                SpotifyUserId: spotifyUserId,
-                JwtRefreshToken: jwtRefreshToken
-            })
-        });
-        if (resp.ok) {
-            const data = await resp.json();
-            jwtToken = data.JwtToken;
-            jwtRefreshToken = data.JwtRefreshToken;
-            // Update localStorage/context
-            const updatedUser = { ...spotifyUser, jwtToken, jwtRefreshToken };
-            localStorage.setItem('spotifyUser', JSON.stringify(updatedUser));
-        } else {
-            throw new Error('Failed to refresh JWT token');
+        if (!isRefreshing) {
+            isRefreshing = true;
+            refreshPromise = (async () => {
+                try {
+                    console.log("Refreshing JWT with:", { spotifyUserId, jwtRefreshToken });
+                    
+                    const resp = await fetch(`${BACKEND_BASE_URL}/spotify/refresh-jwt`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            spotifyUserId,
+                            jwtRefreshToken
+                        })
+                    });
+                    
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        console.log("JWT refreshed successfully:", data);
+                        jwtToken = data.jwtToken;
+                        jwtRefreshToken = data.jwtRefreshToken;
+                        // Update localStorage
+                        const updatedUser = { ...spotifyUser, jwtToken, jwtRefreshToken };
+                        console.log("Updated Spotify user:", updatedUser);
+                        localStorage.setItem('spotifyUser', JSON.stringify(updatedUser));
+                    } else {
+                        throw new Error('Failed to refresh JWT token');
+                    }
+                } finally {
+                    isRefreshing = false;
+                    refreshPromise = null;
+                }
+            })();
         }
-    }
+        
+        // Wait for refresh to complete
+        if (refreshPromise) {
+            await refreshPromise;
+            // Get the updated token from localStorage
+            const updatedUserStr = localStorage.getItem('spotifyUser');
+            if (updatedUserStr) {
+                const updatedUser = JSON.parse(updatedUserStr);
+                jwtToken = updatedUser.jwtToken;
+            }
+        }
+    } 
 
     // Add Authorization header
     const headers = {
