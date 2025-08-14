@@ -163,4 +163,26 @@ const handleError = (error: any) => {
     throw new Error(error.message || "An error occurred while processing your request.");
 }
 
-//TODO - dedicated error handler
+// Pause Spotify track API
+export const PauseSpotifyTrack = async (deviceId: string, spotifyUser: any): Promise<any> => {
+    try {
+        const response = await fetchWithAuth(
+            `${BACKEND_BASE_URL}/spotify/pause`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ deviceId }),
+            },
+            spotifyUser
+        );
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to pause track');
+        }
+        return await response.json();
+    } catch (error) {
+        handleError(error);
+    }
+}

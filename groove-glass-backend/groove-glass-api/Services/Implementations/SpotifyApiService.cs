@@ -209,6 +209,28 @@ namespace groove_glass_api.Services.Implementations
             }
             return results;
         }
-       
+
+        public async Task<bool> PauseTrackAsync(string deviceId, string accessToken)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                var pauseUrl = $"{SPOTIFY_BASE_URL}/me/player/pause?device_id={deviceId}";
+                var response = await client.PutAsync(pauseUrl, null);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Spotify pause track error: {errorContent}");
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return false;
+            }
+        }
     }
 }

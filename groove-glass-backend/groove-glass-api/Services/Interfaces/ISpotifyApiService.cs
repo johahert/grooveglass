@@ -49,6 +49,6 @@ namespace groove_glass_api.Services.Interfaces
         /// <param name="accessToken"></param>
         /// <returns></returns>
         public Task<List<SpotifyDeviceResult>> GetAvailableDevicesAsync(string accessToken);
-
+        Task<bool> PauseTrackAsync(string deviceId, string accessToken);
     }
 }

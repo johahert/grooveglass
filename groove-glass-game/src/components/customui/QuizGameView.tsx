@@ -3,6 +3,8 @@ import { Timer } from './Timer';
 import { useSignalR } from '../providers/SignalRContextProvider';
 import { useSpotifyAuth } from '../providers/SpotifyAuthProvider';
 import { PlaySpotifyTrack } from '../services/api/SpotifyTrackApiService';
+import PlaybackControl from './PlaybackControl';
+import SoundwaveBackground from './SoundwaveBackground';
 
 function QuizGameView() {
     const { room, user, submitAnswer, nextQuestion } = useSignalR();
@@ -61,7 +63,13 @@ function QuizGameView() {
     const answerHoverColors = ['hover:bg-red-500', 'hover:bg-blue-500', 'hover:bg-yellow-500', 'hover:bg-green-500'];
 
     return (
-        <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700">
+        <div className="p-8 rounded-xl shadow-2xl border border-gray-700">
+            <PlaybackControl
+                selectedDevice={spotifyUser?.selectedDevice.id}
+                currentTrack={currentQuestion?.spotifyTrack}
+            />
+            <SoundwaveBackground isPlaying={true} />
+
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold">Question {room.state.currentQuestionIndex + 1}</h2>
                 {room.state.questionEndTime && !allPlayersAnswered && <Timer endTime={room.state.questionEndTime} />}

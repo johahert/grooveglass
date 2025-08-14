@@ -36,7 +36,7 @@ function LobbyPage() {
     };
 
     return (
-        <div className="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700">
+        <div className=" p-8 rounded-xl shadow-2xl border border-gray-700">
 
             {room.quizData.questions.length - 1 === room.state.currentQuestionIndex && room.state.currentQuestionIndex !== 0 && !room.state.isActive && (
                 <div className="bg-gray-700 p-4 rounded-lg mb-6">

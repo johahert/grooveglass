@@ -197,6 +197,8 @@ namespace groove_glass_api.Controllers
             return Ok(new { Message = "Playback started." });
         }
 
+
+
         [Authorize]
         [HttpPost("quiz")]
         public async Task<IActionResult> CreateQuiz([FromBody] QuizContent quizContent)
@@ -331,7 +333,39 @@ namespace groove_glass_api.Controllers
             });
         }
 
+        /// <summary>
+        /// Pauses playback on the user's Spotify device.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [Authorize]
+        [HttpPost("pause")]
+        public async Task<IActionResult> PauseTrack([FromBody] PlayTrackRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.DeviceId))
+                return BadRequest("DeviceId is required.");
 
+            // 1. Get user ID from JWT
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                       ?? User.FindFirst("sub")?.Value;
 
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            // 2. Get user's Spotify access token from DB
+            var user = await _spotifyStorageService.GetUserAsync(userId);
+            if (user == null)
+                return Unauthorized();
+
+            var accessToken = await GetValidAccessTokenAsync(user);
+
+            // 3. Call Spotify API to pause playback
+            var success = await _spotifyApiService.PauseTrackAsync(request.DeviceId, accessToken);
+
+            if (!success)
+                return StatusCode(500, "Failed to pause playback on Spotify.");
+
+            return Ok(new { Message = "Playback paused." });
+        }
     }
 }
