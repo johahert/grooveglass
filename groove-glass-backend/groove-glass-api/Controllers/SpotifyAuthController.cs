@@ -7,6 +7,7 @@ using groove_glass_api.Services.Interfaces;
 using groove_glass_api.Util;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace groove_glass_api.Controllers
 {
@@ -65,12 +66,21 @@ namespace groove_glass_api.Controllers
                 }
 
                 var jwtToken = _encryptionHelper.GenerateJwtToken(user.SpotifyUserId, user.DisplayName);
+                var jwtRefreshToken = _encryptionHelper.GenerateJwtRefreshToken();
+
+                var jwtTokenExpiration = _encryptionHelper.GetJwtTokenExpiration(jwtToken);
+
+                user.JwtRefreshToken = jwtRefreshToken;
+                user.JwtRefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
+                await _spotifyStorageService.StoreOrUpdateUserAsync(user);
 
                 return Ok(new SpotifyUserClientResponse
                 {
                     DisplayName = user.DisplayName,
                     SpotifyUserId = user.SpotifyUserId,
-                    JwtToken = jwtToken
+                    JwtToken = jwtToken,
+                    JwtTokenExpiration = jwtTokenExpiration,
+                    JwtRefreshToken = jwtRefreshToken,
                 });
             }
             catch (Exception ex)
@@ -286,7 +296,6 @@ namespace groove_glass_api.Controllers
                 if (newToken == null)
                 {
                     throw new Exception("Failed to refresh Spotify access token.");
-
                 }
 
                 user.EncryptedAccessToken = _encryptionHelper.EncryptString(newToken.AccessToken);
@@ -299,6 +308,30 @@ namespace groove_glass_api.Controllers
 
             return _encryptionHelper.DecryptString(user.EncryptedAccessToken);
         }
+
+        [HttpPost("refresh-jwt")]
+        public async Task<IActionResult> RefreshJwtToken([FromBody] RefreshTokenRequest request)
+        {
+            var user = await _spotifyStorageService.GetUserAsync(request.SpotifyUserId);
+            if (user == null || user.JwtRefreshToken != request.JwtRefreshToken || user.JwtRefreshTokenExpiration < DateTime.UtcNow)
+                return Unauthorized();
+
+            var newJwtToken = _encryptionHelper.GenerateJwtToken(user.SpotifyUserId, user.DisplayName);
+
+            // Optionally rotate the refresh token
+            var newRefreshToken = _encryptionHelper.GenerateJwtRefreshToken();
+            user.JwtRefreshToken = newRefreshToken;
+            user.JwtRefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
+            await _spotifyStorageService.StoreOrUpdateUserAsync(user);
+
+            return Ok(new
+            {
+                JwtToken = newJwtToken,
+                JwtRefreshToken = newRefreshToken
+            });
+        }
+
+
 
     }
 }

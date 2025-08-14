@@ -1,4 +1,5 @@
 import { useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
+import SpotifyDeviceSelect from "./customui/SpotifyDeviceSelect";
 
 const SpotifyUserToggle = () => {
   const { spotifyUser, login, logout, loading } = useSpotifyAuth();
@@ -6,7 +7,10 @@ const SpotifyUserToggle = () => {
   if (loading) return null;
 
   return (
-    <div className="flex items-center justify-end mb-4">
+    <div className={`flex items-center ${spotifyUser ? 'justify-between' : 'justify-end'} mb-4`}>
+      <div>
+        {spotifyUser && (<SpotifyDeviceSelect />)}
+      </div>
       {spotifyUser ? (
         <div className="flex items-center gap-4">
           <span className="text-white/80">Logged in as <span className="font-bold">{spotifyUser.displayName}</span></span>

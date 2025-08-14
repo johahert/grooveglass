@@ -67,7 +67,6 @@ const CreateQuiz = () => {
 
           {/* Content based on selection */}
           {showAIGenerator ? <AIPromptGenerator /> : <CreateQuizForm />}
-          <SpotifyPlayerTest />
         </div>
       </div>
     </div>

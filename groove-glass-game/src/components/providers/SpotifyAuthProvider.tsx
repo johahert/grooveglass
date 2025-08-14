@@ -38,10 +38,21 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
                 }
                 setLoading(false);
             }
-            console.log("Spotify User State Initialized:", spotifyUser);
         };
         checkAuth();
+
     }, []);
+
+    useEffect(() => {
+        if (spotifyUser) {
+            console.log("Spotify user state updated:", spotifyUser);
+
+            const nowUtc = Date.now();
+            const expirationUtc = new Date(spotifyUser.jwtTokenExpiration).getTime();
+            const jwtTokenTimeLeft = expirationUtc - nowUtc;
+            console.log(`JWT token expires in ${jwtTokenTimeLeft / 1000} seconds`);
+        }
+    }, [spotifyUser]);
 
     const handleLogin = () => {
         const authUrl = new URL("https://accounts.spotify.com/authorize");
@@ -114,6 +125,16 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
         }
     }
 
+    // Method to add/update info to spotifyUser
+    const updateSpotifyUser = (info: Partial<SpotifyUserClientResponse>) => {
+        setSpotifyUser(prev => {
+            const updated = { ...prev, ...info };
+            localStorage.setItem('spotifyUser', JSON.stringify(updated));
+            return updated;
+        });
+        console.log("Spotify user updated:", spotifyUser);
+    };
+
     const value = {
         spotifyUser,
         isAuthenticated: !!spotifyUser,
@@ -125,6 +146,7 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
             window.location.href = SPOTIFY_REDIRECT_URI; 
         },
         getAccessToken: getAccessToken,
+        updateSpotifyUser,
     };
 
     return <SpotifyAuthContext.Provider value={value}>{children}</SpotifyAuthContext.Provider>;

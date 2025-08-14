@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace DatabaseService.Models.Entities
 {
@@ -16,5 +11,7 @@ namespace DatabaseService.Models.Entities
         public string EncryptedAccessToken { get; set; }
         public string EncryptedRefreshToken { get; set; }
         public DateTime TokenExpiration { get; set; }
+        public string JwtRefreshToken { get; set; }
+        public DateTime JwtRefreshTokenExpiration { get; set; }
     }
 }

@@ -42,6 +42,13 @@ namespace DatabaseService.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("JwtRefreshToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("JwtRefreshTokenExpiration")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("SpotifyUserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

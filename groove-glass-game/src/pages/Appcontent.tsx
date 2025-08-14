@@ -28,12 +28,13 @@ export const AppContent = () => {
                     <Routes>
                         <Route path="/" element={<HomePage />} />
                         <Route path="/lobby" element={<LobbyPage />} />
-                            <Route path='/create-quiz' element={
+                        <Route path='/create-quiz' element={
                             <RequireSpotifyLogin>
                                 <CreateQuiz />
                             </RequireSpotifyLogin>
-                            } />
-                        <Route path='host-quiz' element={<HostQuiz />} />
+                        } />
+                        {/* Catch-all route */}
+                        <Route path="*" element={<HomePage />} />
                     </Routes>
                 </main>
             </div>

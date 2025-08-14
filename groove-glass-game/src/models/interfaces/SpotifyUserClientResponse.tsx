@@ -1,5 +1,10 @@
+import { SpotifyDevice } from "./SpotifyDevice";
+
 export interface SpotifyUserClientResponse {
-    jwtToken: string;
-    spotifyUserId: string;
     displayName: string;
+    spotifyUserId: string;
+    jwtToken: string;
+    jwtRefreshToken: string;
+    jwtTokenExpiration: Date;
+    selectedDevice?: SpotifyDevice;
 }

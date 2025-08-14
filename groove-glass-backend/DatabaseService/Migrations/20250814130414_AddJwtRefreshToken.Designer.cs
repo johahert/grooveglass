@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DatabaseService.Migrations
 {
     [DbContext(typeof(SpotifyDatabaseContext))]
-    [Migration("20250726101042_AddQuizEntities")]
-    partial class AddQuizEntities
+    [Migration("20250814130414_AddJwtRefreshToken")]
+    partial class AddJwtRefreshToken
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -44,6 +44,13 @@ namespace DatabaseService.Migrations
                     b.Property<string>("EncryptedRefreshToken")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("JwtRefreshToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("JwtRefreshTokenExpiration")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("SpotifyUserId")
                         .IsRequired()

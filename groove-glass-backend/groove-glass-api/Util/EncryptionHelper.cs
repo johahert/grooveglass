@@ -119,5 +119,21 @@ namespace groove_glass_api.Util
                 return Convert.ToBase64String(randomBytes);
             }
         }
+
+        public DateTime GetJwtTokenExpiration(string jwtToken)
+        {
+            if (string.IsNullOrEmpty(jwtToken))
+            {
+                throw new ArgumentNullException(nameof(jwtToken));
+            }
+            var jwtHandler = new JwtSecurityTokenHandler();
+            var token = jwtHandler.ReadJwtToken(jwtToken);
+            var expClaim = token.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Exp);
+            if (expClaim != null && long.TryParse(expClaim.Value, out long exp))
+            {
+                return DateTimeOffset.FromUnixTimeSeconds(exp).UtcDateTime;
+            }
+            throw new ArgumentException("Invalid JWT token: Expiration claim not found or invalid.", nameof(jwtToken));
+        }
     }
 }

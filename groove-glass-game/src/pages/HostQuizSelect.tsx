@@ -7,23 +7,25 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 export default function HostQuizSelect({ selectedQuiz, setSelectedQuiz }: { selectedQuiz: number | null, setSelectedQuiz: (quizId: number | null) => void }) {
   const { spotifyUser } = useSpotifyAuth();
   const [quizzes, setQuizzes] = useState<QuizOption[]>([]);
-
+  
   useEffect(() => {
+    if(!spotifyUser) return;
+
     const fetchQuizzes = async () => {
-      console.log("Fetching quizzes for user:", spotifyUser);
+      console.log("Fetching quizzes for user:", spotifyUser.displayName);
       if (!spotifyUser || !spotifyUser.jwtToken) {
         console.error("Spotify user not authenticated");
         return;
       }
-      const quizzes: QuizOption[] = await GetQuizzes(spotifyUser.jwtToken);
+      const quizzes: QuizOption[] = await GetQuizzes(spotifyUser);
       setQuizzes(quizzes);
       console.log("Fetched quizzes:", quizzes);
     };
     fetchQuizzes();
   }, [spotifyUser]);
-
+  
   if (!spotifyUser) return null;
-
+  
   return (
       
       <DropdownMenu>
