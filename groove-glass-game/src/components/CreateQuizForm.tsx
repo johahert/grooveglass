@@ -10,6 +10,7 @@ import TrackSearch from "./customui/TrackSearch";
 import { useSpotifyAuth } from "./providers/SpotifyAuthProvider";
 import { Quiz, Question } from "@/models/interfaces/Quiz";
 import { SaveQuiz } from "./services/api/SpotifyTrackApiService";
+import { RadioGroup } from "./ui/radio-group";
 
 
 export const CreateQuizForm = () => {
@@ -81,16 +82,14 @@ export const CreateQuizForm = () => {
   };
 
   return (
-    <div className="space-y-6 ">
+    <div className="space-y-4">
       {/* Quiz Title */}
-      <Card className="bg-white/5  border border-white/10">
+      <Card >
         <CardHeader>
-          <CardTitle className="text-white">Quiz Details</CardTitle>
+          <CardTitle >Quiz Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="quiz-title" className="text-white font-medium">
+              <Label htmlFor="quiz-title" >
                 Quiz Title
               </Label>
               <Input
@@ -99,49 +98,44 @@ export const CreateQuizForm = () => {
                 placeholder="Enter your quiz title"
                 value={quizTitle}
                 onChange={(e) => setQuizTitle(e.target.value)}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:bg-white/15"
               />
-            </div>
-          </div>
         </CardContent>
       </Card>
 
       {/* Questions */}
       {questions?.length > 0 && 
-      <div className="space-y-4 ">
+      <div className="space-y-4">
         {questions.map((question, index) => (
-          <Card key={question.id} className="bg-white/5 border border-white/10">
+          <Card key={question.id} >
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-white">Question {index + 1}</CardTitle>
+              <CardTitle >Question {index + 1}</CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => removeQuestion(question.id)}
-                className="text-white hover:bg-white/5"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label className="text-white font-medium">Question</Label>
+                <Label >Question</Label>
                 <Input
                   type="text"
                   placeholder="Enter your question"
                   value={question.question}
                   onChange={(e) => updateQuestion(question.id, 'question', e.target.value)}
-                  className="bg-white/10 border-white/20 text-white placeholder:text-white/60 focus:bg-white/15"
                 />
               </div>
 
               <div>
-                <Label className="text-white font-medium">Spotify Track</Label>
+                <Label >Spotify Track</Label>
                 <TrackSearch token={spotifyUser.jwtToken} onTrackSelected={(track) => updateQuestion(question.id, 'spotifyTrack', track.id)} />
               </div>
 
               <div>
                 <Label className="text-white font-medium">Answer Options</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <RadioGroup className="grid grid-cols-2 gap-2">
                   {question.answers.map((answer, answerIndex) => (
                     <div key={answerIndex} className="flex items-center space-x-2">
                       <input
@@ -156,11 +150,10 @@ export const CreateQuizForm = () => {
                         placeholder={`Answer ${answerIndex + 1}`}
                         value={answer}
                         onChange={(e) => updateAnswer(question.id, answerIndex, e.target.value)}
-                        className="bg-white/20 border-white/30 text-white placeholder:text-white/60 focus:bg-white/30"
                       />
                     </div>
                   ))}
-                </div>
+                </RadioGroup>
               </div>
             </CardContent>
           </Card>
@@ -171,8 +164,8 @@ export const CreateQuizForm = () => {
       {/* Add Question Button */}
       <Button
         onClick={addQuestion}
-        className="w-full bg-white/10 border border-white/20 text-white hover:bg-white/15"
-        variant="outline"
+        className="w-full border my-4"
+        variant="secondary"
       >
         <Plus className="w-4 h-4 mr-2" />
         Add Question
@@ -181,7 +174,7 @@ export const CreateQuizForm = () => {
       {/* Save Quiz Button */}
       <Button
         onClick={saveQuiz}
-        className="w-full bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white border-none text-lg py-6"
+        className="w-full"
       >
         <Music className="w-5 h-5 mr-2" />
         Save Quiz

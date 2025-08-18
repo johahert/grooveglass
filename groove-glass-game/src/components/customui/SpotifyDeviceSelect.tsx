@@ -10,9 +10,6 @@ const SpotifyDeviceSelect = () => {
     const [devices, setDevices] = useState<SpotifyDevice[]>([]);
     const [selectedDevice, setSelectedDevice] = useState<string>("");
 
-    const selectedColor = '#18181b';
-    const bgDark = '#18181b';
-
     const fetchDevices = async () => {
             const devices: SpotifyDevice[] = await GetSpotifyDevices(spotifyUser);
             console.log("Fetched devices:", devices);
@@ -40,13 +37,13 @@ const SpotifyDeviceSelect = () => {
 
     return (
         <Select value={selectedDevice} onValueChange={setSelectedDevice}>
-            <SelectTrigger className="bg-primary-element border border-subtle text-white rounded-lg">
+            <SelectTrigger >
                 <SelectValue placeholder="Select a Spotify device" />
             </SelectTrigger>
-            <SelectContent className="bg-primary-element border border-subtle text-white rounded-lg shadow-lg">
+            <SelectContent >
                 {devices?.map(device => (
-                    <SelectItem key={device.id} value={device.id} className="bg-primary-element text-white hover:bg-zinc-800 cursor-pointer"
-                    style={{ backgroundColor: selectedDevice === device.id ? selectedColor : bgDark, color: 'white' }}>
+                    <SelectItem key={device.id} value={device.id} 
+                    >
                         {device.name} ({device.type})
                     </SelectItem>
                 ))}

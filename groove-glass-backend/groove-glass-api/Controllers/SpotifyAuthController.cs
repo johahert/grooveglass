@@ -18,12 +18,14 @@ namespace groove_glass_api.Controllers
         private readonly ISpotifyApiService _spotifyApiService;
         private readonly ISpotifyStorageService _spotifyStorageService;
         private readonly EncryptionHelper _encryptionHelper;
+        private readonly IOpenAiApiService _openAiApiService;
 
-        public SpotifyAuthController(ISpotifyApiService spotifyApiService, EncryptionHelper encryptionHelper, ISpotifyStorageService spotifyStorageService)
+        public SpotifyAuthController(ISpotifyApiService spotifyApiService, EncryptionHelper encryptionHelper, ISpotifyStorageService spotifyStorageService, IOpenAiApiService openAiApiService)
         {
             _spotifyApiService = spotifyApiService;
             _encryptionHelper = encryptionHelper;
             _spotifyStorageService = spotifyStorageService;
+            _openAiApiService = openAiApiService;
         }
 
         /// <summary>
@@ -366,6 +368,17 @@ namespace groove_glass_api.Controllers
                 return StatusCode(500, "Failed to pause playback on Spotify.");
 
             return Ok(new { Message = "Playback paused." });
+        }
+
+        [HttpGet("test-ai")]
+        public async Task<IActionResult> TestAi()
+        {
+            var response = await _openAiApiService.GetQuizPrompt("test", 5);
+            if (string.IsNullOrEmpty(response))
+            {
+                return BadRequest("Failed to generate quiz prompt.");
+            }
+            return Ok(new { QuizPrompt = response });
         }
     }
 }

@@ -1,5 +1,9 @@
 import { useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
 import SpotifyDeviceSelect from "./customui/SpotifyDeviceSelect";
+import { Button } from "./ui/button";
+import { NavigationMenu, NavigationMenuContent, NavigationMenuItem } from "./ui/navigation-menu";
+import { Switch } from "./ui/switch";
+import { ThemeToggle } from "./ui/theme-toggle";
 
 const SpotifyUserToggle = () => {
   const { spotifyUser, login, logout, loading } = useSpotifyAuth();
@@ -7,27 +11,29 @@ const SpotifyUserToggle = () => {
   if (loading) return null;
 
   return (
-    <div className={`flex items-center ${spotifyUser ? 'justify-between' : 'justify-end'} mb-4`}>
-      <div>
-        {spotifyUser && (<SpotifyDeviceSelect />)}
+    <div className="flex justify-between items-center">
+      <div className="flex gap-4 items-center">
+        {spotifyUser && <SpotifyDeviceSelect />}
+        <ThemeToggle />
       </div>
+
       {spotifyUser ? (
-        <div className="flex items-center gap-4">
-          <span className="text-white/80">Logged in as <span className="font-bold ">{spotifyUser.displayName}</span></span>
-          <button
+        <div className="text-foreground">
+          <span>Logged in as <span className="font-bold ">{spotifyUser.displayName}</span></span>
+          <Button
+            variant="ghost"
             onClick={logout}
-            className="px-4 py-2 rounded-lg bg-primary-element border border-subtle hover:bg-white/10 text-red-200 "
-          >
+            >
             Log out
-          </button>
+          </Button>
         </div>
       ) : (
-        <button
-          onClick={login}
-          className="px-4 py-2 rounded-lg bg-primary-element border border-subtle hover:bg-white/10 text-primary-200 "
+        <Button
+        variant="ghost"
+        onClick={login}
         >
           Log in with Spotify
-        </button>
+        </Button>
       )}
     </div>
   );

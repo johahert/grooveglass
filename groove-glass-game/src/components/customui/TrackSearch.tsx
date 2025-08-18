@@ -1,5 +1,12 @@
 import { set } from 'date-fns';
 import React from 'react'
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Search, X, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface SpotifyTrackResult {
     title: string;
@@ -76,84 +83,97 @@ const TrackSearch = ({token, onTrackSelected} : TrackSearchProps) => {
     }
 
     return (
-    <div className='rounded-lg overflow-hidden border border-white/50 bg-white/10 backdrop-blur-sm'>
+    <> 
       {selectedTrack ? (
-        <div className=''>
-          <div className='flex items-center justify-between p-2'>
-              <div className='text-sm flex-1 '>
-                  <h5 className='font-semibold text-white'>{selectedTrack.title}</h5>
-                  <p className="text-white/80">
+        <>
+          <Card className='flex items-center justify-between p-2 px-4'>
+              <div className='flex-1 space-y-1'>
+                  <h5 className='font-semibold'>{selectedTrack.title}</h5>
+                  <p className="text-sm text-muted-foreground">
                       {selectedTrack.artists?.join(', ')}
                   </p>
               </div>
-              <button 
-                className='bg-white/25 px-4 py-2 text-white rounded-md hover:bg-white/40 text-sm' 
+              <Button 
+                variant="outline"
+                size="sm"
                 onClick={() => setSelectedTrack(null)}
               >
                 Change
-              </button>
-          </div>
-        </div>
+              </Button>
+          </Card>
+        </>
       ) : (
-        <div>
-          <div className="relative w-full flex">
-            <div className="relative flex items-center flex-1">
-              <input
-                type="text"
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()} 
-                placeholder="Search for a track..."
-                className='input input-bordered input-primary w-full p-2 text-base bg-white/10 placeholder-white/50 text-white pr-10'
-              />
-              {query && (
-                <button
-                  type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                  onClick={() => {
-                    setQuery("");
-                    setSearchResults([]);
-                  }}
-                  aria-label="Clear search"
-                >
-                  &#10005;
-                </button>
-              )}
-            </div>
-            <button className='bg-white/25 px-4 text-white' onClick={handleSearch}>Search</button>
-          </div>
-          <div>
-            {loading && (
-              <div className='text-white text-center p-4'>
-                <p>Loading...</p>
+        <>
+            <div className="flex gap-2 items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()} 
+                  placeholder="Search for a track..."
+                  className="pl-10 pr-10"
+                />
+                {query && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                    onClick={() => {
+                      setQuery("");
+                      setSearchResults([]);
+                    }}
+                    aria-label="Clear search"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
-            )}
+              <Button 
+              onClick={handleSearch} 
+              disabled={loading || !query.trim()}
+              size='sm'
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Search'
+                )}
+              </Button>
+            </div>
+            
             {searchResults.length > 0 && (
-              <ul className='divide-y divide-white/25 text-sm '>
+                <Card className='mt-4'>
+              <ScrollArea className='h-40 w-full ' >
+                  <div className='p-4'>
+
                 {searchResults.map((track) => (
-                  <li 
-                    className='p-2 hover:bg-black/20 cursor-pointer text-white' 
+                  <Button
+                    className='w-full mr-4 hover:bg-none'
+                    variant='ghost'
                     key={track.id} 
                     onClick={() => {
                       setSelectedTrack(track)
                       if (onTrackSelected) {
                         onTrackSelected(track);
                       }
-                    }
-                  }
-                  >
-                    <h5 className='font-semibold'>{track.title}</h5>
-                    <p className='text-white/80'>
+                    }}
+                    >
+                    <h5 className='font-semibold text-sm'>{track.title}</h5>
+                    <p className='text-xs text-muted-foreground'>
                       {track.artists?.join(', ')}
                     </p>
-                  </li>
+                  </Button>
                 ))}
-              </ul>
+                </div>
+              </ScrollArea>
+                </Card>
             )}
-          </div>
-        </div>
+        </>
       )}
-    </div>
+    </>
   )
 }
 

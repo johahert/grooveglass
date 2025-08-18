@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using groove_glass_api.Models.QuizRoomModels;
+using OpenAI.Chat;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,17 @@ builder.Services.AddDbContext<SpotifyDatabaseContext>(options =>
 builder.Services.AddScoped<DatabaseService.Services.Interfaces.ISpotifyStorageService, DatabaseService.Services.Implementations.SpotifyStorageService>();
 builder.Services.AddScoped<groove_glass_api.Services.Interfaces.ISpotifyApiService, groove_glass_api.Services.Implementations.SpotifyApiService>();
 builder.Services.AddScoped<groove_glass_api.Util.EncryptionHelper>();
+builder.Services.AddScoped<groove_glass_api.Services.Interfaces.IOpenAiApiService, groove_glass_api.Services.Implementations.OpenAiApiService>();
+
+builder.Services.AddSingleton<ChatClient>(serviceProvider =>
+{
+    var apiKey = builder.Configuration["OpenAi:Key"];
+    var model = "gpt-4o-mini";
+    return new ChatClient(
+        model: model,
+        apiKey: apiKey
+    );
+});
 
 builder.Services.AddAuthentication(options =>
 {

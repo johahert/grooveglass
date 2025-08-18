@@ -5,6 +5,14 @@ import HostQuizSelect from './HostQuizSelect';
 import { Link } from 'react-router-dom';
 import SpotifyDeviceSelect from '@/components/customui/SpotifyDeviceSelect';
 import CreateQuiz from './CreateQuiz';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
+import { Users, Plus, Music } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Switch } from '@/components/ui/switch';
 
 function HomePage() {
     const { createRoom, joinRoom, error } = useSignalR();
@@ -33,8 +41,7 @@ function HomePage() {
         }
 
         try {
-            await createRoom(displayName, selectedQuiz); // Hardcoding quizId to 1
-            
+            await createRoom(displayName, selectedQuiz);
         } catch (e) {
             console.error(e);
         } finally {
@@ -58,89 +65,132 @@ function HomePage() {
     };
 
     return (
-        <div className="space-y-12 ">
-            {error && <div className="bg-red-900 border border-red-500 text-red-200 p-4 rounded-lg text-center">{error}</div>}
+        <div className="space-y-8">
+            {error && (
+                <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
             
-            <div className="bg-primary-element p-8 rounded-xl shadow-xl border relative border-subtle overflow-hidden">
-                <div className="absolute inset-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
-                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <div className="rounded-full border-4 border-primary-700 opacity-30 w-[400px] h-[400px] animate-pulse"></div>
-                        <div className="rounded-full border-2 border-primary-600 opacity-20 w-[600px] h-[600px] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-                        <div className="rounded-full border-2 border-primary-700 opacity-10 w-[800px] h-[800px] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"></div>
-                    </div>
-                </div>
-                <div className="relative z-10">
-                    <h2 className="text-3xl  mb-6 text-primary">Get Started</h2>
-                    <input
-                        type="text"
-                        placeholder="Enter your display name"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        className="w-full p-4 bg-zinc-800 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none transition shadow-md"
-                    />
-                </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8">
-                {/* Join Room Section */}
-                <div>
-                    <div className="bg-primary-element p-8 rounded-xl shadow-xl border border-subtle flex flex-col">
-                        <h3 className="text-2xl mb-4 ">Join a Quiz</h3>
-                        <input
+            {/* Get Started Section */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Get Started</CardTitle>
+                    <CardDescription>Enter your display name to join or create a quiz</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2">
+                        <Label htmlFor="displayName">Display Name</Label>
+                        <Input
+                            id="displayName"
                             type="text"
-                            placeholder="Enter room code"
-                            value={roomCode}
-                            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                            className="w-full p-4 bg-zinc-800 border border-zinc-700 rounded-lg mb-4 focus:ring-2 focus:ring-primary-500 focus:outline-none transition uppercase"
-                            maxLength={6}
-                            />
-                        <button 
-                            onClick={handleJoinRoom} 
-                            disabled={isSubmitting || !displayName || !roomCode}
-                            className="w-full mt-auto bg-gradient-to-br from-primary-400 to-primary-700 hover:bg-primary-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                            {isSubmitting ? 'Joining...' : 'Join Room'}
-                        </button>
+                            placeholder="Enter your display name"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                        />
                     </div>
-                </div>
+                </CardContent>
+            </Card>
 
+            <div className="grid md:grid-cols-2 gap-6">
+                {/* Join Room Section */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Users className="w-5 h-5" />
+                            Join a Quiz
+                        </CardTitle>
+                        <CardDescription>
+                            Enter a room code to join an existing quiz
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="roomCode">Room Code</Label>
+                            <Input
+                                id="roomCode"
+                                type="text"
+                                placeholder="Enter 6-digit room code"
+                                value={roomCode}
+                                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                                className="uppercase text-center font-mono tracking-wider"
+                                maxLength={6}
+                            />
+                        </div>
+                        <Button 
+                            onClick={handleJoinRoom} 
+                            variant='secondary'
+                            disabled={isSubmitting || !displayName || !roomCode}
+                            className="w-full"
+                        >
+                            {isSubmitting ? 'Joining...' : 'Join Room'}
+                        </Button>
+                    </CardContent>
+                </Card>
 
                 {/* Create Room Section */}
-                {spotifyUser && (
-                    <div className="bg-primary-element p-8 rounded-xl shadow-2xl border border-subtle flex flex-col">
-                        <h3 className="text-2xl mb-4 ">Host a Quiz</h3>
-                        <p className="text-gray-400 mb-4 flex-grow">Ready to challenge your friends? Create a new room now!</p>
-                        <div className='mb-4'>
-                            <HostQuizSelect selectedQuiz={selectedQuiz} setSelectedQuiz={setSelectedQuiz} />
-                        </div>
-                        <button 
-                            onClick={handleCreateRoom} 
-                            disabled={isSubmitting || !displayName || !selectedQuiz}
-                            className="w-full mt-auto bg-gradient-to-br from-purple-400 to-purple-700 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isSubmitting ? 'Creating...' : 'Create New Room'}
-                        </button>
-                    </div>
+                {spotifyUser ? (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Plus className="w-5 h-5" />
+                                Host a Quiz
+                            </CardTitle>
+                            <CardDescription>
+                                Ready to challenge your friends? Create a new room now!
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Select Quiz</Label>
+                                <HostQuizSelect selectedQuiz={selectedQuiz} setSelectedQuiz={setSelectedQuiz} />
+                            </div>
+                            <Button 
+                                onClick={handleCreateRoom} 
+                                disabled={isSubmitting || !displayName || !selectedQuiz}
+                                className="w-full"
+                            >
+                                {isSubmitting ? 'Creating...' : 'Create New Room'}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Music className="w-5 h-5" />
+                                Host a Quiz
+                            </CardTitle>
+                            <CardDescription>
+                                You need to connect your Spotify account to create or host quizzes.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Button variant="outline" disabled className="w-full">
+                                Connect Spotify to Host
+                            </Button>
+                        </CardContent>
+                    </Card>
                 )}
-
-               
-
-                {spotifyUser && 
-                <div className='col-span-2'>
-                    <CreateQuiz />
-                </div>
-                }
-
-                {!spotifyUser && (
-                    <div>
-                        <p className="text-gray-400 mb-4 flex-grow">
-                            You need to connect your Spotify account to create or host quizzes.
-                        </p>
-                    </div>
-                )}
-
-                
             </div>
+
+            {/* Create Quiz Section */}
+            {spotifyUser && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Music className="w-5 h-5" />
+                            Create New Quiz
+                        </CardTitle>
+                        <CardDescription>
+                            Build your own custom quiz with your favorite tracks
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <CreateQuiz />
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

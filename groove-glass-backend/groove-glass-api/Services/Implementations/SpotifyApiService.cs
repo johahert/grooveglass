@@ -1,6 +1,7 @@
 ﻿using groove_glass_api.Models;
 using groove_glass_api.Models.Frontend;
 using groove_glass_api.Services.Interfaces;
+using OpenAI.Chat;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
