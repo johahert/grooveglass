@@ -2,17 +2,13 @@ import React, { useState } from 'react';
 import { useSignalR } from '@/components/providers/SignalRContextProvider';
 import { useSpotifyAuth } from '@/components/providers/SpotifyAuthProvider';
 import HostQuizSelect from './HostQuizSelect';
-import { Link } from 'react-router-dom';
-import SpotifyDeviceSelect from '@/components/customui/SpotifyDeviceSelect';
 import CreateQuiz from './CreateQuiz';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
-import { Users, Plus, Music } from 'lucide-react';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { Switch } from '@/components/ui/switch';
+import { Users, Plus, Music, X } from 'lucide-react';
 
 function HomePage() {
     const { createRoom, joinRoom, error } = useSignalR();
@@ -83,12 +79,6 @@ function HomePage() {
 
     return (
         <div className="space-y-8">
-            {error && (
-                <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
-            )}
-            
             {/* Get Started Section */}
             <Card>
                 <CardHeader>

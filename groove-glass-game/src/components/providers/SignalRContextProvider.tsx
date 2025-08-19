@@ -239,6 +239,16 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
         }
     }
 
+    useEffect(() => {
+        if (error) {
+            toast({
+                title: 'Error',
+                description: error,
+                variant: 'destructive',
+            });
+        }
+    }, [error]);
+
     const value: SignalRContextType = {
         connection,
         room,
