@@ -1,7 +1,7 @@
 import { toast } from "@/hooks/use-toast";
 import { Quiz, QuizOption } from "@/models/interfaces/Quiz";
 import { SpotifyUserClientResponse } from "@/models/interfaces/SpotifyUserClientResponse";
-import { useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
+import { SpotifyAuthContextType, useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL;
 interface PlayTrackRequest {
     trackId: string;
@@ -10,77 +10,56 @@ interface PlayTrackRequest {
 
 // Helper to get and refresh JWT token if needed
 let isRefreshing = false;
-let refreshPromise: Promise<void> | null = null;
+let refreshPromise: Promise<string |null> | null = null;
 
-export async function fetchWithAuth(input: RequestInfo, init: RequestInit = {}, spotifyUser: SpotifyUserClientResponse) {
-    let jwtToken = spotifyUser.jwtToken;
-    let jwtTokenExpiration = spotifyUser.jwtTokenExpiration;
-    let jwtRefreshToken = spotifyUser.jwtRefreshToken;
-    let spotifyUserId = spotifyUser.spotifyUserId;
+export async function fetchWithAuth(
+    input: RequestInfo, 
+    init: RequestInit = {}, 
+    auth: SpotifyAuthContextType
+) {
+    let { spotifyUser, refreshTokens } = auth;
+
+    if(!spotifyUser){
+        throw new Error("Spotify user is not authenticated");
+    }
 
     const nowUtc = Date.now();
-    const expirationUtc = new Date(jwtTokenExpiration).getTime();
-    const jwtTokenTimeLeft = expirationUtc - nowUtc;
-
-    console.log("JWT token time left (ms):", jwtTokenTimeLeft);
+    const expirationUtc = new Date(spotifyUser.jwtTokenExpiration).getTime();
+    const isTokenExpired = expirationUtc - nowUtc < 60000;
 
     // If token is expired or about to expire (e.g., < 1 min left)
-    if (jwtTokenTimeLeft < 60000) {
+    if (isTokenExpired) {
         if (!isRefreshing) {
-            isRefreshing = true;
-            refreshPromise = (async () => {
-                try {
-                    console.log("Refreshing JWT with:", { spotifyUserId, jwtRefreshToken });
-                    
-                    const resp = await fetch(`${BACKEND_BASE_URL}/spotify/refresh-jwt`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            spotifyUserId,
-                            jwtRefreshToken
-                        })
-                    });
-                    
-                    if (resp.ok) {
-                        const data = await resp.json();
-                        console.log("JWT refreshed successfully:", data);
-                        jwtToken = data.jwtToken;
-                        jwtRefreshToken = data.jwtRefreshToken;
-                        // Update localStorage
-                        const updatedUser = { ...spotifyUser, jwtToken, jwtRefreshToken };
-                        console.log("Updated Spotify user:", updatedUser);
-                        localStorage.setItem('spotifyUser', JSON.stringify(updatedUser));
-                    } else {
-                        throw new Error('Failed to refresh JWT token');
-                    }
-                } finally {
-                    isRefreshing = false;
-                    refreshPromise = null;
-                }
-            })();
+           console.log("Refreshing JWT token...");
+           isRefreshing = true;
+           refreshPromise = refreshTokens().finally(() => {
+               isRefreshing = false;
+               refreshPromise = null;
+           });
         }
-        
-        // Wait for refresh to complete
-        if (refreshPromise) {
-            await refreshPromise;
-            // Get the updated token from localStorage
-            const updatedUserStr = localStorage.getItem('spotifyUser');
-            if (updatedUserStr) {
-                const updatedUser = JSON.parse(updatedUserStr);
-                jwtToken = updatedUser.jwtToken;
-            }
+
+        console.log("Waiting for refresh to complete...");
+        const newJwtToken = await refreshPromise;
+
+        if (!newJwtToken) {
+            console.error("Failed to refresh JWT token");
+            throw new Error("Failed to refresh JWT token");
         }
+
+        spotifyUser.jwtToken = newJwtToken;
     } 
 
     // Add Authorization header
     const headers = {
-        ...(init.headers || {}),
-        Authorization: `Bearer ${jwtToken}`,
+        ...init.headers,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${spotifyUser.jwtToken}`,
     };
+
     return fetch(input, { ...init, headers });
 }
 
-export const PlaySpotifyTrack = async (trackId: string, deviceId: string, spotifyUser: any): Promise<any> => {
+export const PlaySpotifyTrack = async (trackId: string, deviceId: string, auth: SpotifyAuthContextType): Promise<any> => {
     try{
         const response = await fetchWithAuth(
             `${BACKEND_BASE_URL}/spotify/play`,
@@ -91,7 +70,7 @@ export const PlaySpotifyTrack = async (trackId: string, deviceId: string, spotif
                 },
                 body: JSON.stringify({ trackId, deviceId } as PlayTrackRequest),
             },
-            spotifyUser
+            auth
         );
         if (!response.ok) {
             const errorData = await response.json();
@@ -106,7 +85,7 @@ export const PlaySpotifyTrack = async (trackId: string, deviceId: string, spotif
     }
 }
 
-export const GetSpotifyDevices = async (spotifyUser: any): Promise<any> => {
+export const GetSpotifyDevices = async (auth: SpotifyAuthContextType): Promise<any> => {
     try {
         const response = await fetchWithAuth(
             `${BACKEND_BASE_URL}/spotify/devices`,
@@ -116,7 +95,7 @@ export const GetSpotifyDevices = async (spotifyUser: any): Promise<any> => {
                     'Content-Type': 'application/json',
                 },
             },
-            spotifyUser
+            auth
         );
         if (!response.ok) {
             const errorData = await response.json();
@@ -159,9 +138,8 @@ export const SaveQuiz = async (quiz: Quiz, spotifyUser: any): Promise<any> => {
     }
 }
 
-export const GetQuizzes = async (spotifyUser: SpotifyUserClientResponse): Promise<QuizOption[]> => {
+export const GetQuizzes = async (auth: SpotifyAuthContextType): Promise<QuizOption[]> => {
     try {
-        if(!spotifyUser || !spotifyUser.jwtToken) throw new Error("No user or token provided");
         const response = await fetchWithAuth(
             `${BACKEND_BASE_URL}/spotify/quizzes`,
             {
@@ -170,7 +148,7 @@ export const GetQuizzes = async (spotifyUser: SpotifyUserClientResponse): Promis
                     'Content-Type': 'application/json',
                 },
             },
-            spotifyUser
+            auth
         );
         if(!response.ok) {
             const errorData = await response.json();
@@ -194,7 +172,7 @@ const handleError = (error: any) => {
 }
 
 // Pause Spotify track API
-export const PauseSpotifyTrack = async (deviceId: string, spotifyUser: any): Promise<any> => {
+export const PauseSpotifyTrack = async (deviceId: string, auth: SpotifyAuthContextType): Promise<any> => {
     try {
         const response = await fetchWithAuth(
             `${BACKEND_BASE_URL}/spotify/pause`,
@@ -205,7 +183,7 @@ export const PauseSpotifyTrack = async (deviceId: string, spotifyUser: any): Pro
                 },
                 body: JSON.stringify({ deviceId }),
             },
-            spotifyUser
+            auth
         );
         if (!response.ok) {
             const errorData = await response.json();

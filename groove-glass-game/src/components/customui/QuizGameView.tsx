@@ -4,11 +4,13 @@ import { useSignalR } from '../providers/SignalRContextProvider';
 import { useSpotifyAuth } from '../providers/SpotifyAuthProvider';
 import { PlaySpotifyTrack } from '../services/api/SpotifyTrackApiService';
 import PlaybackControl from './PlaybackControl';
-import SoundwaveBackground from './SoundwaveBackground';
+import { Card, CardContent, CardHeader } from '../ui/card';
+import { Button } from '../ui/button';
 
 function QuizGameView() {
     const { room, user, submitAnswer, nextQuestion } = useSignalR();
-    const { spotifyUser } = useSpotifyAuth();
+    const auth = useSpotifyAuth();
+    const spotifyUser = auth.spotifyUser;
     const [, setForceRender] = useState(0);
 
     const answeredIndex = useMemo(() => room?.state.answers?.[user.id], [room, user]);
@@ -44,7 +46,7 @@ function QuizGameView() {
             const currentTrackId = room?.quizData?.questions[room.state.currentQuestionIndex]?.spotifyTrack;
             console.log("Current Track ID:", currentTrackId);
 
-            await PlaySpotifyTrack(currentTrackId, spotifyUser?.selectedDevice.id, spotifyUser);
+            await PlaySpotifyTrack(currentTrackId, spotifyUser?.selectedDevice.id, auth);
         }
         playTrack();
 
@@ -63,52 +65,47 @@ function QuizGameView() {
     const hasAnswered = room.state.answers?.[user.id] !== undefined;
     const isTimeUp = room.state.questionEndTime ? Date.now() > room.state.questionEndTime : false;
 
-    const answerColors = ['bg-red-600', 'bg-blue-600', 'bg-yellow-600', 'bg-green-600'];
-    const answerHoverColors = ['hover:bg-red-500', 'hover:bg-blue-500', 'hover:bg-yellow-500', 'hover:bg-green-500'];
-
     return (
-        <div className="bg-primary-element p-8 rounded-xl shadow-2xl border border-subtle">
-
-            <PlaybackControl
-                selectedDevice={spotifyUser?.selectedDevice?.id}
-                currentTrack={currentQuestion?.spotifyTrack}
-            />
-
-            <div className="flex justify-between items-end mb-6 border border-white/10 bg-white/5 p-4 rounded-lg">
-                <div className='h-full flex flex-1 flex-col justify-end'>
-
+        <Card>
+            <CardHeader>
+                <PlaybackControl
+                    selectedDevice={spotifyUser?.selectedDevice?.id}
+                    currentTrack={currentQuestion?.spotifyTrack}
+                />
                     <h2 className="text-lg text-white/25">Question {room.state.currentQuestionIndex + 1}</h2>
                     <h3 className="text-3xl">{currentQuestion.question}</h3>
-                </div>
                 {room.state.questionEndTime && !allPlayersAnswered && <Timer endTime={room.state.questionEndTime} />}
-            </div>
+            </CardHeader>
+            <CardContent>
+
+
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 {currentQuestion.answers.map((answer, index) => (
-                    <button
-                        key={index}
-                        onClick={() => submitAnswer(index)}
-                        disabled={hasAnswered || isTimeUp}
-                        className={`p-6 text-xl font-semibold rounded-lg transition duration-300 text-white border border-white/15 ${(
-                            allPlayersAnswered || isTimeUp
-                        ) && index === currentQuestion.correctAnswer ? 'bg-primary-400' : 'bg-white/5 hover:bg-white/10'} ${answeredIndex === index ? 'ring ring-primary-300' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    <Button
+                    size='lg'
+                    key={index}
+                    onClick={() => submitAnswer(index)}
+                    disabled={hasAnswered || isTimeUp}
+                    className={`p-8 text-xl ${(
+                        allPlayersAnswered || isTimeUp
+                    ) && index === currentQuestion.correctAnswer ? 'bg-teal-200' : 'bg-muted-foreground'} ${answeredIndex === index ? 'ring ring-teal-500' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         {answer}
-                    </button>
+                    </Button>
                 ))}
             </div>
 
-            <div className="flex flex-col md:flex-row justify-between items-center text-gray-400">
-                <div className="mb-4 md:mb-0">
-                    <p>{Object.keys(room.state.answers ?? {}).length} / {room.players.length} players have answered</p>
-                </div>
+            <div className="flex flex-col md:flex-row justify-between items-center text-muted-foreground">
+                <p>{Object.keys(room.state.answers ?? {}).length} / {room.players.length} players have answered</p>
                 {isHost && (isTimeUp || allPlayersAnswered) && (
-                    <button onClick={nextQuestion} className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300">
+                    <Button onClick={nextQuestion} >
                         {room.state.currentQuestionIndex >= (room.quizData?.questions.length ?? 0) - 1 ? 'Show Final Scores' : 'Next Question'}
-                    </button>
+                    </Button>
                 )}
             </div>
-        </div>
+            </CardContent>
+        </Card>
     );
 }
 export default QuizGameView;

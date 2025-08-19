@@ -326,11 +326,13 @@ namespace groove_glass_api.Controllers
             var newRefreshToken = _encryptionHelper.GenerateJwtRefreshToken();
             user.JwtRefreshToken = newRefreshToken;
             user.JwtRefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
+            var newJwtTokenExpiration = _encryptionHelper.GetJwtTokenExpiration(newJwtToken);
             await _spotifyStorageService.StoreOrUpdateUserAsync(user);
 
             return Ok(new
             {
                 JwtToken = newJwtToken,
+                JwtTokenExpiration = newJwtTokenExpiration,
                 JwtRefreshToken = newRefreshToken
             });
         }

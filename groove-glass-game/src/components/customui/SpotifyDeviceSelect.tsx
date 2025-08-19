@@ -6,12 +6,13 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { SpotifyDevice } from '@/models/interfaces/SpotifyDevice';
 
 const SpotifyDeviceSelect = () => {
-    const { spotifyUser, updateSpotifyUser } = useSpotifyAuth();
+    const auth = useSpotifyAuth();
+    const { spotifyUser, updateSpotifyUser } = auth;
     const [devices, setDevices] = useState<SpotifyDevice[]>([]);
     const [selectedDevice, setSelectedDevice] = useState<string>("");
 
     const fetchDevices = async () => {
-            const devices: SpotifyDevice[] = await GetSpotifyDevices(spotifyUser);
+            const devices: SpotifyDevice[] = await GetSpotifyDevices(auth);
             console.log("Fetched devices:", devices);
             if(!devices){
                 console.error("No devices found or error fetching devices");

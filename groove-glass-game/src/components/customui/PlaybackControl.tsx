@@ -9,32 +9,32 @@ interface PlaybackControlProps {
 }
 
 const PlaybackControl = ({ selectedDevice, currentTrack }: PlaybackControlProps) => {
-  const { spotifyUser } = useSpotifyAuth();
+  const auth = useSpotifyAuth();
   const [isPlaying, setIsPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  if (!spotifyUser || !selectedDevice || !currentTrack) return null;
+  if (!auth.spotifyUser || !selectedDevice || !currentTrack) return null;
 
   const handlePlay = async () => {
     setLoading(true);
-    await PlaySpotifyTrack(currentTrack, selectedDevice, spotifyUser);
+    await PlaySpotifyTrack(currentTrack, selectedDevice, auth);
     setIsPlaying(true);
     setLoading(false);
   };
 
   const handlePause = async () => {
     setLoading(true);
-    await PauseSpotifyTrack(selectedDevice, spotifyUser);
+    await PauseSpotifyTrack(selectedDevice, auth);
     setIsPlaying(false);
     setLoading(false);
   };
 
   return (
     <div className="flex items-center gap-4 my-4">
-      <Button onClick={handlePlay} disabled={isPlaying || loading} className="bg-green-600 hover:bg-green-700 text-white">
+      <Button onClick={handlePlay} disabled={isPlaying || loading} variant="default">
         Play
       </Button>
-      <Button onClick={handlePause} disabled={!isPlaying || loading} className="bg-red-600 hover:bg-red-700 text-white">
+      <Button onClick={handlePause} disabled={!isPlaying || loading} variant="destructive">
         Pause
       </Button>
     </div>

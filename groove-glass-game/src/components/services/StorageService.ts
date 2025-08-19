@@ -16,3 +16,4 @@ export const getQuizPlayerInfo = (roomCode: string): PlayerInfo | null => {
     }
     return null;
 }
+

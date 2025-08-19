@@ -5,7 +5,6 @@ import SpotifyUserToggle from '@/components/SpotifyUserToggle';
 import LobbyPage from './LobbyPage';
 import CreateQuiz from './CreateQuiz';
 import RequireSpotifyLogin from '@/components/RequireSpotifyLogin';
-import HostQuiz from './HostQuiz';
 
 export const AppContent = () => {
     const { isLoading } = useSignalR();
@@ -29,11 +28,6 @@ export const AppContent = () => {
                     <Routes>
                         <Route path="/" element={<HomePage />} />
                         <Route path="/lobby" element={<LobbyPage />} />
-                        <Route path='/create-quiz' element={
-                            <RequireSpotifyLogin>
-                                <CreateQuiz />
-                            </RequireSpotifyLogin>
-                        } />
                         {/* Catch-all route */}
                         <Route path="*" element={<HomePage />} />
                     </Routes>

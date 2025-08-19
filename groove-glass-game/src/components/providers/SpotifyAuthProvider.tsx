@@ -1,5 +1,6 @@
 import { SpotifyUserClientResponse } from "@/models/interfaces/SpotifyUserClientResponse";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const SPOTIFY_CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
 const SPOTIFY_REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI;
@@ -15,44 +16,103 @@ const SPOTIFY_SCOPES = [
     "streaming",
 ].join(" ");
 
-export const SpotifyAuthContext = createContext<any>(null);
+export interface SpotifyAuthContextType {
+    spotifyUser: SpotifyUserClientResponse | null;
+    loading: boolean;
+    login: () => void;
+    logout: () => void;
+    isAuthenticated: boolean;
+    refreshTokens: () => Promise<string |null>;
+    updateSpotifyUser: (info: Partial<SpotifyUserClientResponse>) => void;
+}
+
+export const SpotifyAuthContext = createContext<SpotifyAuthContextType | null>(null);
 
 export function SpotifyAuthProvider({ children }: { children: React.JSX.Element }) {
     const [spotifyUser, setSpotifyUser] = useState<SpotifyUserClientResponse | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const refreshTokens = useCallback(async (): Promise<string | null> => {
+        const currentUser = spotifyUser;
+        if(!currentUser?.jwtRefreshToken || !currentUser?.spotifyUserId){
+            console.error("No refresh token or user ID available for refreshing token.");
+            setSpotifyUser(null);
+            localStorage.removeItem('spotifyUser');
+            return null;
+        }
+
+        try{
+            console.log("Attempting to refresh JWT...");
+            const response = await fetch(`${BACKEND_BASE_URL}/spotify/refresh-jwt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    spotifyUserId: currentUser.spotifyUserId,
+                    jwtRefreshToken: currentUser.jwtRefreshToken
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to refresh JWT token: ${response?.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            const updatedUser: SpotifyUserClientResponse = {
+                ...currentUser,
+                jwtToken: data.jwtToken,
+                jwtTokenExpiration: data.jwtTokenExpiration, 
+                jwtRefreshToken: data.jwtRefreshToken, 
+            };
+
+            setSpotifyUser(updatedUser);
+            localStorage.setItem('spotifyUser', JSON.stringify(updatedUser));
+            console.log("JWT refreshed and state updated successfully.");
+
+            return updatedUser.jwtToken;
+
+        } catch (error) {
+            console.error("Error refreshing token:", error);
+            setSpotifyUser(null);
+            localStorage.removeItem('spotifyUser');
+            return null;
+        }
+
+        return null;
+    }, [spotifyUser])
+
     useEffect(() => {
-        const checkAuth = async () => {
+        const initializeAuth  = async () => {
             const storedUser = localStorage.getItem('spotifyUser');
-            if (storedUser) {
-                console.log("Found stored Spotify user in localStorage.");
-                setSpotifyUser(JSON.parse(storedUser));
-                setLoading(false);
-            } else {
-                const urlParams = new URLSearchParams(window.location.search);
-                const code = urlParams.get("code");
-                if(code){
-                    console.log("Spotify Auth Code: ", code);
-                    await exchangeCodeForToken(code);
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get("code");
+
+            if(code){
+                try {
+                    const response = await fetch(`${BACKEND_BASE_URL}/spotify/token`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code }),
+                    });
+                    const data: SpotifyUserClientResponse = await response.json();
+                    if (!response.ok) throw new Error('Failed to exchange code');
+                    
+                    setSpotifyUser(data);
+                    localStorage.setItem('spotifyUser', JSON.stringify(data));
+                } catch (error) {
+                    console.error("Error exchanging code for token:", error);
+                } finally {
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
-                setLoading(false);
+            } else if (storedUser) {
+                setSpotifyUser(JSON.parse(storedUser));
             }
+            setLoading(false);
         };
-        checkAuth();
+
+        initializeAuth ();
 
     }, []);
-
-    useEffect(() => {
-        if (spotifyUser) {
-            console.log("Spotify user state updated:", spotifyUser);
-
-            const nowUtc = Date.now();
-            const expirationUtc = new Date(spotifyUser.jwtTokenExpiration).getTime();
-            const jwtTokenTimeLeft = expirationUtc - nowUtc;
-            console.log(`JWT token expires in ${jwtTokenTimeLeft / 1000} seconds`);
-        }
-    }, [spotifyUser]);
 
     const handleLogin = () => {
         const authUrl = new URL("https://accounts.spotify.com/authorize");
@@ -66,65 +126,6 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
         window.location.href = authUrl.toString();
     };
 
-    const exchangeCodeForToken = async (code: string) => {
-        console.log("Sending code to backend to be exchanged for a token.");
-        try {
-            const response = await fetch(`${BACKEND_BASE_URL}/spotify/token`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ code }),
-            });
-            const data: SpotifyUserClientResponse = await response.json();
-            if (!response.ok) {
-                throw new Error((data as any).error || 'Failed to exchange code for token');
-            }
-
-            console.log("Received data from backend:", data);
-
-            setSpotifyUser(data);
-            localStorage.setItem('spotifyUser', JSON.stringify(data));
-
-        } catch (error) {
-            console.error("Error exchanging code for token:", error);
-            alert("An error occurred during login. Please try again.");
-        }
-    };
-
-    const getAccessToken = async (trackId: string): Promise<any> => {
-        try {
-            const token = spotifyUser?.jwtToken;
-            if (!token) {
-                console.error("No token available for playing track");
-                return null;
-            }
-
-            const response = await fetch(`${BACKEND_BASE_URL}/spotify/access-token`, {
-                method: 'GET',
-                headers: {
-                'Content-Type': 'application/json',
-                ...(token && { 'Authorization': `Bearer ${token}` }),
-                },
-            })
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error("Error playing track:", errorData);
-            } 
-
-            const data = await response.json();
-
-            console.log("Access Token for track:", data);
-
-            return data;
-
-        } catch (error) {
-            console.error("Error in playTrack:", error);
-            return null;
-        }
-    }
-
     // Method to add/update info to spotifyUser
     const updateSpotifyUser = (info: Partial<SpotifyUserClientResponse>) => {
         setSpotifyUser(prev => {
@@ -135,6 +136,14 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
         console.log("Spotify user updated:", spotifyUser);
     };
 
+    const updateSpotifyUserInfo = useCallback((info: Partial<SpotifyUserClientResponse>) => {
+        setSpotifyUser(prev => {
+            const updated = { ...prev, ...info };
+            localStorage.setItem('spotifyUser', JSON.stringify(updated));
+            return updated;
+        });
+    }, []);
+
     const value = {
         spotifyUser,
         isAuthenticated: !!spotifyUser,
@@ -143,11 +152,12 @@ export function SpotifyAuthProvider({ children }: { children: React.JSX.Element 
         logout: () => {
             setSpotifyUser(null);
             localStorage.removeItem('spotifyUser');
-            window.location.href = SPOTIFY_REDIRECT_URI; 
         },
-        getAccessToken: getAccessToken,
-        updateSpotifyUser,
+        updateSpotifyUser: updateSpotifyUserInfo,
+        refreshTokens
     };
+
+    
 
     return <SpotifyAuthContext.Provider value={value}>{children}</SpotifyAuthContext.Provider>;
 };

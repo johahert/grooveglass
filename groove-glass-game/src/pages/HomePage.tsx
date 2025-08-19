@@ -16,11 +16,28 @@ import { Switch } from '@/components/ui/switch';
 
 function HomePage() {
     const { createRoom, joinRoom, error } = useSignalR();
-    const { spotifyUser } = useSpotifyAuth();
+    const { spotifyUser, loading } = useSpotifyAuth();
     const [displayName, setDisplayName] = useState('');
     const [roomCode, setRoomCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedQuiz, setSelectedQuiz] = useState<number | null>(null);
+
+    if(loading){
+        return <div className='space-y-8'>
+            {Array.from({ length: 3 }).map((_, idx) => (
+                <Card key={idx} className="animate-pulse">
+                    <CardHeader>
+                        <div className="h-6 bg-muted dark:bg-accent rounded w-1/3 mb-2" />
+                        <div className="h-4 bg-muted dark:bg-accent rounded w-2/3" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-10 bg-muted dark:bg-accent rounded mb-2" />
+                        <div className="h-8 bg-muted dark:bg-accent rounded w-1/2" />
+                    </CardContent>
+                </Card>
+            ))}
+        </div>;
+    }
 
     const handleValidation = () => {
         if (!displayName.trim()) {

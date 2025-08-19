@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@radix-ui/react-select';
+import { Copy } from 'lucide-react';
 
 function LobbyPage() {
     const { room, user, leaveRoom, startGame } = useSignalR();
@@ -54,33 +55,35 @@ function LobbyPage() {
             )}
 
             
-            <CardHeader className='flex justify-between mb-4'>
+            <CardHeader >
+                <div className='flex w-full justify-between'>
+                <div className='flex flex-col gap-2'>
                     <CardTitle className="flex items-center gap-2">
-                        Lobby
+                            Lobby
                     </CardTitle>
                     <CardDescription>
-                        Waiting for players to join the quiz room.
+                            Waiting for players to join the quiz room.
                     </CardDescription>
-               <div 
-                    className="bg-accent border-2 border-dashed p-4 rounded-lg text-center cursor-pointer hover:border-indigo-500 transition"
+                </div>
+               <Button 
+                    className="border-2 border-dashed border-foreground"
+                    variant='outline'
                     onClick={handleCopyCode}
                     title="Click to copy"
-                >
-                    <p className="text-gray-400 text-sm">ROOM CODE</p>
-                    <p className="text-3xl font-mono font-bold tracking-widest text-white">{room.roomCode}</p>
+                    >
+                    <Copy className='mr-2' size={24} />
+                    <p className="text-3xl font-mono font-bold tracking-widest">{room.roomCode}</p>
+                </Button>
                 </div>
             
             </CardHeader>
             <CardContent>
-                <Card >
-                    <CardHeader>
-                        <CardTitle>Players ({room.players.length})</CardTitle>
-                        
-                    </CardHeader>
-                    <CardContent >
-                        <ul className=" divide-y divide-muted-accent">
+                <CardTitle className="text-lg font-bold mb-2">Players ({room.players.length})</CardTitle>
+                <Card>
+                    <CardContent className='p-0 px-4'>
+                        <ul className="divide-y divide-muted-accent">
                             {room.players.map((player) => (
-                                <li key={player.userId} className="flex items-center justify-between w-full py-2">
+                                <li key={player.userId} className="flex items-center justify-between w-full py-2 ">
                                     <span >{player.displayName}</span>
                                     <div className="flex items-center text-sm">
                                         {player.userId === room.hostUserId && <span className="text-accent-foreground">Host 👑</span>}
