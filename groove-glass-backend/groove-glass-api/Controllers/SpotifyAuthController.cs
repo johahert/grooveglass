@@ -7,7 +7,6 @@ using groove_glass_api.Services.Interfaces;
 using groove_glass_api.Util;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace groove_glass_api.Controllers
 {
@@ -18,14 +17,12 @@ namespace groove_glass_api.Controllers
         private readonly ISpotifyApiService _spotifyApiService;
         private readonly ISpotifyStorageService _spotifyStorageService;
         private readonly EncryptionHelper _encryptionHelper;
-        private readonly IOpenAiApiService _openAiApiService;
 
-        public SpotifyAuthController(ISpotifyApiService spotifyApiService, EncryptionHelper encryptionHelper, ISpotifyStorageService spotifyStorageService, IOpenAiApiService openAiApiService)
+        public SpotifyAuthController(ISpotifyApiService spotifyApiService, EncryptionHelper encryptionHelper, ISpotifyStorageService spotifyStorageService)
         {
             _spotifyApiService = spotifyApiService;
             _encryptionHelper = encryptionHelper;
             _spotifyStorageService = spotifyStorageService;
-            _openAiApiService = openAiApiService;
         }
 
         /// <summary>
@@ -40,40 +37,31 @@ namespace groove_glass_api.Controllers
             {
                 return BadRequest("Spotify authorization code missing");
             }
+
             try
             {
-                var result = await _spotifyApiService.ExchangeCodeAndGetProfileAsync(request.Code);
+                var spotifyUserResponse = await _spotifyApiService.ExchangeCodeAndGetProfileAsync(request.Code);
 
-                if (result == null)
+                if (spotifyUserResponse == null)
                 {
-                    return NotFound("Spotify user not found");
+                    return NotFound("Spotify user not found with the provided code");
                 }
 
-                var userToStore = new SpotifyUser
-                {
-                    SpotifyUserId = result.SpotifyUserId,
-                    DisplayName = result.DisplayName,
-                    EncryptedAccessToken = _encryptionHelper.EncryptString(result.Token.AccessToken),
-                    EncryptedRefreshToken = _encryptionHelper.EncryptString(result.Token.RefreshToken),
-                    TokenExpiration = DateTime.UtcNow.AddSeconds(result.Token.ExpiresIn)
-                };
-
-                await _spotifyStorageService.StoreOrUpdateUserAsync(userToStore);
-
-                var user = await _spotifyStorageService.GetUserAsync(result.SpotifyUserId);
-
-                if(user == null)
-                {
-                    return NotFound("Spotify user not found in database");
-                }
-
-                var jwtToken = _encryptionHelper.GenerateJwtToken(user.SpotifyUserId, user.DisplayName);
+                var jwtToken = _encryptionHelper.GenerateJwtToken(spotifyUserResponse.SpotifyUserId, spotifyUserResponse.DisplayName);
                 var jwtRefreshToken = _encryptionHelper.GenerateJwtRefreshToken();
-
                 var jwtTokenExpiration = _encryptionHelper.GetJwtTokenExpiration(jwtToken);
 
-                user.JwtRefreshToken = jwtRefreshToken;
-                user.JwtRefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
+                var user = new SpotifyUser
+                {
+                    SpotifyUserId = spotifyUserResponse.SpotifyUserId,
+                    DisplayName = spotifyUserResponse.DisplayName,
+                    EncryptedAccessToken = _encryptionHelper.EncryptString(spotifyUserResponse.Token.AccessToken),
+                    EncryptedRefreshToken = _encryptionHelper.EncryptString(spotifyUserResponse.Token.RefreshToken),
+                    TokenExpiration = DateTime.UtcNow.AddSeconds(spotifyUserResponse.Token.ExpiresIn),
+                    JwtRefreshToken = jwtRefreshToken,
+                    JwtRefreshTokenExpiration = DateTime.UtcNow.AddDays(7)
+                };
+
                 await _spotifyStorageService.StoreOrUpdateUserAsync(user);
 
                 return Ok(new SpotifyUserClientResponse
@@ -87,7 +75,6 @@ namespace groove_glass_api.Controllers
             }
             catch (Exception ex)
             {
-                // Log ex.Message properly in production
                 return StatusCode(500, $"Error: {ex.Message}");
             }
         }
@@ -198,8 +185,6 @@ namespace groove_glass_api.Controllers
 
             return Ok(new { Message = "Playback started." });
         }
-
-
 
         [Authorize]
         [HttpPost("quiz")]
@@ -372,15 +357,6 @@ namespace groove_glass_api.Controllers
             return Ok(new { Message = "Playback paused." });
         }
 
-        [HttpGet("test-ai")]
-        public async Task<IActionResult> TestAi()
-        {
-            var response = await _openAiApiService.GetQuizPrompt("test", 5);
-            if (string.IsNullOrEmpty(response))
-            {
-                return BadRequest("Failed to generate quiz prompt.");
-            }
-            return Ok(new { QuizPrompt = response });
-        }
+       
     }
 }

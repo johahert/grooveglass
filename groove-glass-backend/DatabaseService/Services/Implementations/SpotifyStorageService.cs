@@ -2,7 +2,6 @@
 using DatabaseService.Models.Entities;
 using DatabaseService.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using System.Net.WebSockets;
 
 namespace DatabaseService.Services.Implementations
 {

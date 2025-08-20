@@ -188,13 +188,13 @@ namespace groove_glass_api.Services.Implementations
         public async Task<List<SpotifyDeviceResult>> GetAvailableDevicesAsync(string accessToken)
         {
             using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
             var response = await httpClient.GetAsync("https://api.spotify.com/v1/me/player/devices");
             response.EnsureSuccessStatusCode();
 
             var json = await response.Content.ReadAsStringAsync();
-            var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+            var root = JsonDocument.Parse(json).RootElement;
             var devices = root.GetProperty("devices");
 
             var results = new List<SpotifyDeviceResult>();
