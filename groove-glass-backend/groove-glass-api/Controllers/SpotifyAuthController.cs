@@ -1,5 +1,5 @@
 ﻿using DatabaseService.Models.Entities;
-using DatabaseService.Services.Implementations;
+using DatabaseService.Services.Interfaces;
 using groove_glass_api.Models;
 using groove_glass_api.Models.Frontend;
 using groove_glass_api.Models.Frontend.QuizData;
@@ -17,10 +17,15 @@ namespace groove_glass_api.Controllers
         private readonly ISpotifyApiService _spotifyApiService;
         private readonly EncryptionHelper _encryptionHelper;
         private readonly IAuthenticateSpotifyUserService _authenticateSpotifyUserService;
-        private readonly QuizStorageService _quizStorageService;
-        private readonly UserStorageService _userStorageService;
+        private readonly IQuizStorageService _quizStorageService;
+        private readonly IEntityStorageService<SpotifyUser, string> _userStorageService;
 
-        public SpotifyAuthController(ISpotifyApiService spotifyApiService, EncryptionHelper encryptionHelper, IAuthenticateSpotifyUserService authenticateSpotifyUserService, QuizStorageService quizStorageService, UserStorageService userStorageService)
+        public SpotifyAuthController(
+            ISpotifyApiService spotifyApiService, 
+            EncryptionHelper encryptionHelper, 
+            IAuthenticateSpotifyUserService authenticateSpotifyUserService, 
+            IQuizStorageService quizStorageService, 
+            IEntityStorageService<SpotifyUser, string> userStorageService)
         {
             _spotifyApiService = spotifyApiService;
             _encryptionHelper = encryptionHelper;

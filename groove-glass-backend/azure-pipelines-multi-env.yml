@@ -1,0 +1,186 @@
+# Multi-Environment Azure DevOps Pipeline
+# This pipeline supports deployment to multiple environments (dev, staging, production)
+
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+    - feature/*
+  paths:
+    include:
+    - groove-glass-api/*
+    - DatabaseService/*
+    - GrooveGlassTest/*
+    - '*.sln'
+
+variables:
+  buildConfiguration: 'Release'
+  dotNetFramework: 'net8.0'
+  dotNetVersion: '8.0.x'
+
+stages:
+- stage: Build
+  displayName: 'Build and Test'
+  jobs:
+  - job: BuildAndTest
+    displayName: 'Build, Test, and Package'
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+    - checkout: self
+      fetchDepth: 0
+
+    - task: UseDotNet@2
+      displayName: 'Use .NET 8 SDK'
+      inputs:
+        packageType: 'sdk'
+        version: $(dotNetVersion)
+        includePreviewVersions: false
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore Dependencies'
+      inputs:
+        command: 'restore'
+        projects: '**/*.sln'
+        feedsToUse: 'select'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Build Solution'
+      inputs:
+        command: 'build'
+        projects: '**/*.sln'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Unit Tests'
+      inputs:
+        command: 'test'
+        projects: 'GrooveGlassTest/GrooveGlassTest.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --logger trx --results-directory $(Agent.TempDirectory) --verbosity normal'
+        publishTestResults: true
+
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish Code Coverage'
+      condition: succeededOrFailed()
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+        reportDirectory: '$(Agent.TempDirectory)/**/coveragereport'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish Web API'
+      inputs:
+        command: 'publish'
+        publishWebProjects: false
+        projects: 'groove-glass-api/groove-glass-api.csproj'
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/groove-glass-api --no-build'
+        zipAfterPublish: true
+        modifyOutputPath: false
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifacts'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'grooveglass-backend'
+        publishLocation: 'Container'
+
+# Development Environment Deployment
+- stage: DeployDev
+  displayName: 'Deploy to Development'
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+  variables:
+  - group: grooveglass-development
+  jobs:
+  - deployment: DeployToDev
+    displayName: 'Deploy to Development Environment'
+    environment: 'development'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - template: deployment-steps.yml
+            parameters:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              webAppName: '$(DEV_WEB_APP_NAME)'
+              resourceGroupName: '$(DEV_RESOURCE_GROUP_NAME)'
+              environmentName: 'Development'
+
+# Staging Environment Deployment  
+- stage: DeployStaging
+  displayName: 'Deploy to Staging'
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  variables:
+  - group: grooveglass-staging
+  jobs:
+  - deployment: DeployToStaging
+    displayName: 'Deploy to Staging Environment'
+    environment: 'staging'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - template: deployment-steps.yml
+            parameters:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              webAppName: '$(STAGING_WEB_APP_NAME)'
+              resourceGroupName: '$(STAGING_RESOURCE_GROUP_NAME)'
+              environmentName: 'Staging'
+
+# Production Environment Deployment
+- stage: DeployProduction
+  displayName: 'Deploy to Production'
+  dependsOn: DeployStaging
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  variables:
+  - group: grooveglass-production
+  jobs:
+  - deployment: DeployToProduction
+    displayName: 'Deploy to Production Environment'
+    environment: 'production'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - template: deployment-steps.yml
+            parameters:
+              azureSubscription: '$(AZURE_SERVICE_CONNECTION)'
+              webAppName: '$(PROD_WEB_APP_NAME)'
+              resourceGroupName: '$(PROD_RESOURCE_GROUP_NAME)'
+              environmentName: 'Production'
+
+          # Production-specific health checks
+          - task: PowerShell@2
+            displayName: 'Production Health Check'
+            inputs:
+              targetType: 'inline'
+              script: |
+                $healthUrl = "https://$(PROD_WEB_APP_NAME).azurewebsites.net/health"
+                $maxAttempts = 10
+                $attempt = 1
+                
+                do {
+                  try {
+                    Write-Host "Health check attempt $attempt of $maxAttempts..."
+                    $response = Invoke-RestMethod -Uri $healthUrl -Method Get -TimeoutSec 30
+                    Write-Host "Health check successful: $response"
+                    exit 0
+                  }
+                  catch {
+                    Write-Host "Health check failed: $($_.Exception.Message)"
+                    Start-Sleep -Seconds 30
+                    $attempt++
+                  }
+                } while ($attempt -le $maxAttempts)
+                
+                Write-Error "Health check failed after $maxAttempts attempts"
+                exit 1

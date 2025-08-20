@@ -1,0 +1,105 @@
+# Deployment Steps Template
+# This template contains reusable deployment steps for different environments
+
+parameters:
+- name: azureSubscription
+  type: string
+- name: webAppName
+  type: string
+- name: resourceGroupName
+  type: string
+- name: environmentName
+  type: string
+
+steps:
+- checkout: none
+
+- task: DownloadBuildArtifacts@0
+  displayName: 'Download Build Artifacts'
+  inputs:
+    buildType: 'current'
+    downloadType: 'single'
+    artifactName: 'grooveglass-backend'
+    downloadPath: '$(System.ArtifactsDirectory)'
+
+- task: AzureRmWebAppDeployment@4
+  displayName: 'Deploy to Azure Web App'
+  inputs:
+    ConnectionType: 'AzureRM'
+    azureSubscription: ${{ parameters.azureSubscription }}
+    appType: 'webApp'
+    WebAppName: ${{ parameters.webAppName }}
+    ResourceGroupName: ${{ parameters.resourceGroupName }}
+    packageForLinux: '$(System.ArtifactsDirectory)/grooveglass-backend/groove-glass-api/*.zip'
+    RuntimeStack: 'DOTNETCORE|8.0'
+    StartupCommand: ''
+    AppSettings: |
+      -ASPNETCORE_ENVIRONMENT ${{ parameters.environmentName }}
+      -ConnectionStrings__DefaultConnection "$(CONNECTION_STRING)"
+      -Spotify__ClientId "$(SPOTIFY_CLIENT_ID)"
+      -Spotify__ClientSecret "$(SPOTIFY_CLIENT_SECRET)"
+      -Spotify__RedirectUri "$(SPOTIFY_REDIRECT_URI)"
+      -OpenAi__Key "$(OPENAI_API_KEY)"
+      -Jwt__Key "$(JWT_KEY)"
+      -Jwt__Issuer "$(JWT_ISSUER)"
+      -EncryptionKey "$(ENCRYPTION_KEY)"
+
+- task: AzureCLI@2
+  displayName: 'Configure Web App Settings'
+  inputs:
+    azureSubscription: ${{ parameters.azureSubscription }}
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # Enable Always On for production workloads
+      az webapp config set --resource-group ${{ parameters.resourceGroupName }} --name ${{ parameters.webAppName }} --always-on true
+      
+      # Configure health check endpoint
+      az webapp config set --resource-group ${{ parameters.resourceGroupName }} --name ${{ parameters.webAppName }} --generic-configurations '{"healthCheckPath": "/health"}'
+      
+      # Set minimum TLS version
+      az webapp config set --resource-group ${{ parameters.resourceGroupName }} --name ${{ parameters.webAppName }} --min-tls-version 1.2
+
+- task: PowerShell@2
+  displayName: 'Wait for Deployment'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "Waiting for deployment to complete..."
+      Start-Sleep -Seconds 60
+
+- task: PowerShell@2
+  displayName: 'Application Health Check'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $webAppUrl = "https://${{ parameters.webAppName }}.azurewebsites.net"
+      $healthUrl = "$webAppUrl/health"
+      $maxAttempts = 5
+      $attempt = 1
+      
+      Write-Host "Checking application health at: $healthUrl"
+      
+      do {
+        try {
+          Write-Host "Health check attempt $attempt of $maxAttempts..."
+          $response = Invoke-RestMethod -Uri $healthUrl -Method Get -TimeoutSec 30
+          Write-Host "? Health check successful!"
+          Write-Host "Response: $response"
+          
+          # Also check the main endpoint
+          $mainResponse = Invoke-WebRequest -Uri $webAppUrl -Method Get -TimeoutSec 30
+          Write-Host "? Main endpoint check successful! Status: $($mainResponse.StatusCode)"
+          
+          exit 0
+        }
+        catch {
+          Write-Host "? Health check failed: $($_.Exception.Message)"
+          if ($attempt -eq $maxAttempts) {
+            Write-Error "Health check failed after $maxAttempts attempts"
+            exit 1
+          }
+          Start-Sleep -Seconds 30
+          $attempt++
+        }
+      } while ($attempt -le $maxAttempts)

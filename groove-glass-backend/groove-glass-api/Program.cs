@@ -1,6 +1,7 @@
 using DatabaseService.Models;
 using DatabaseService.Models.Entities;
 using DatabaseService.Services.Implementations;
+using DatabaseService.Services.Interfaces;
 using groove_glass_api.Models.QuizRoomModels;
 using groove_glass_api.Services.Implementations;
 using groove_glass_api.Services.Interfaces;
@@ -39,10 +40,21 @@ builder.Services.AddDbContext<SpotifyDatabaseContext>(options =>
 builder.Services.AddScoped<ISpotifyApiService, SpotifyApiService>();
 builder.Services.AddScoped<EncryptionHelper>();
 builder.Services.AddScoped<IOpenAiApiService, OpenAiApiService>();
+
+// Register concrete services
 builder.Services.AddScoped<QuizStorageService>();
 builder.Services.AddScoped<UserStorageService>();
+
+// Register interfaces
+builder.Services.AddScoped<IQuizStorageService, QuizStorageService>();
+builder.Services.AddScoped<IEntityStorageService<SpotifyUser, string>, UserStorageService>();
+builder.Services.AddScoped<IEntityStorageService<Quiz, int>, QuizStorageService>();
+
 builder.Services.AddScoped<SpotifyAccessTokenService>();
 builder.Services.AddScoped<IAuthenticateSpotifyUserService, AuthenticateSpotifyUserService>();
+
+// Keep the old interface for backward compatibility if needed
+builder.Services.AddScoped<ISpotifyStorageService, SpotifyStorageService>();
 
 builder.Services.AddSingleton<ChatClient>(serviceProvider =>
 {

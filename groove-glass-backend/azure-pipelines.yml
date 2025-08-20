@@ -1,0 +1,173 @@
+# Azure DevOps Pipeline for GrooveGlass Backend
+# This pipeline builds, tests, and deploys the ASP.NET Core Web API to Azure
+
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+  paths:
+    include:
+    - groove-glass-api/*
+    - DatabaseService/*
+    - GrooveGlassTest/*
+    - '*.sln'
+
+variables:
+  # Build Configuration
+  buildConfiguration: 'Release'
+  dotNetFramework: 'net8.0'
+  dotNetVersion: '8.0.x'
+  
+  # Azure Service Connection (update with your service connection name)
+  azureSubscription: 'your-azure-service-connection'
+  
+  # Web App Details (update with your Azure Web App details)
+  webAppName: 'your-grooveglass-webapp'
+  resourceGroupName: 'your-resource-group'
+  
+  # Database Migration
+  connectionStringKey: 'DefaultConnection'
+
+stages:
+- stage: Build
+  displayName: 'Build and Test'
+  jobs:
+  - job: BuildAndTest
+    displayName: 'Build and Test Job'
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+    - checkout: self
+      fetchDepth: 0
+
+    - task: UseDotNet@2
+      displayName: 'Use .NET 8 SDK'
+      inputs:
+        packageType: 'sdk'
+        version: $(dotNetVersion)
+        includePreviewVersions: false
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore NuGet Packages'
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
+        feedsToUse: 'select'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Build Solution'
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Unit Tests'
+      inputs:
+        command: 'test'
+        projects: 'GrooveGlassTest/GrooveGlassTest.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build --collect:"XPlat Code Coverage" --logger trx --results-directory $(Agent.TempDirectory)'
+        publishTestResults: true
+
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish Code Coverage Results'
+      condition: succeededOrFailed()
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Publish Application'
+      inputs:
+        command: 'publish'
+        publishWebProjects: false
+        projects: 'groove-glass-api/groove-glass-api.csproj'
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/app --no-build'
+        zipAfterPublish: true
+        modifyOutputPath: false
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Build Artifacts'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+- stage: Deploy
+  displayName: 'Deploy to Azure'
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployToAzure
+    displayName: 'Deploy to Azure Web App'
+    environment: 'production'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: none
+
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download Build Artifacts'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'drop'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Azure Web App'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              appType: 'webApp'
+              appName: $(webAppName)
+              resourceGroupName: $(resourceGroupName)
+              package: '$(System.ArtifactsDirectory)/drop/app/*.zip'
+              deploymentMethod: 'auto'
+
+          # Optional: Run database migrations
+          - task: SqlAzureDacpacDeployment@1
+            displayName: 'Run Database Migrations'
+            condition: and(succeeded(), ne(variables['SKIP_DB_MIGRATION'], 'true'))
+            inputs:
+              azureSubscription: $(azureSubscription)
+              authenticationType: 'servicePrincipal'
+              serverName: 'your-sql-server.database.windows.net'
+              databaseName: 'your-database-name'
+              sqlUsername: '$(SQL_USERNAME)'
+              sqlPassword: '$(SQL_PASSWORD)'
+              deployType: 'InlineSqlTask'
+              SqlInline: |
+                -- Add your migration commands here if needed
+                -- This is optional - you might prefer to handle migrations in application startup
+                PRINT 'Database migration placeholder'
+
+- stage: IntegrationTests
+  displayName: 'Integration Tests'
+  dependsOn: Deploy
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - job: IntegrationTests
+    displayName: 'Run Integration Tests'
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+    - checkout: self
+
+    - task: UseDotNet@2
+      displayName: 'Use .NET 8 SDK'
+      inputs:
+        packageType: 'sdk'
+        version: $(dotNetVersion)
+
+    # Add integration tests here if you have them
+    - script: |
+        echo "Integration tests would run here"
+        echo "You can add API health checks, smoke tests, etc."
+        # Example: curl https://$(webAppName).azurewebsites.net/health
+      displayName: 'Run Integration Tests'

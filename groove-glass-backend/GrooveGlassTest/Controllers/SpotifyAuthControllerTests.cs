@@ -32,7 +32,6 @@ namespace GrooveGlassTest.Controllers
             return new EncryptionHelper(config);
         }
 
-
         [Fact]
         public async Task LoginSpotifyUser_ValidCode_ReturnsJwtTokenAndDisplayName()
         {
@@ -41,10 +40,11 @@ namespace GrooveGlassTest.Controllers
             var testDisplayName = "Test User";
             var testAccessToken = "access";
             var testRefreshToken = "refresh";
-            var testJwtKey = Convert.ToBase64String(new byte[32] { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32 });
 
             var spotifyApiServiceMock = new Mock<ISpotifyApiService>();
-            var spotifyStorageServiceMock = new Mock<ISpotifyStorageService>();
+            var userStorageServiceMock = new Mock<IEntityStorageService<SpotifyUser, string>>();
+            var quizStorageServiceMock = new Mock<IQuizStorageService>();
+            var authenticateSpotifyUserServiceMock = new Mock<IAuthenticateSpotifyUserService>();
 
             var encryptionHelper = GetEncryptionHelper();
 
@@ -66,25 +66,16 @@ namespace GrooveGlassTest.Controllers
                 .Setup(x => x.ExchangeCodeAndGetProfileAsync(It.IsAny<string>()))
                 .ReturnsAsync(profileResponse);
 
-            spotifyStorageServiceMock
-                .Setup(x => x.StoreOrUpdateUserAsync(It.IsAny<SpotifyUser>()))
+            userStorageServiceMock
+                .Setup(x => x.StoreOrUpdateAsync(It.IsAny<SpotifyUser>()))
                 .Returns(Task.CompletedTask);
-
-            spotifyStorageServiceMock
-                .Setup(x => x.GetUserAsync(testUserId))
-                .ReturnsAsync(new SpotifyUser
-                {
-                    SpotifyUserId = testUserId,
-                    DisplayName = testDisplayName,
-                    EncryptedAccessToken = encryptionHelper.EncryptString(testAccessToken),
-                    EncryptedRefreshToken = encryptionHelper.EncryptString(testRefreshToken),
-                    TokenExpiration = System.DateTime.UtcNow.AddHours(1)
-                });
 
             var controller = new SpotifyAuthController(
                 spotifyApiServiceMock.Object,
                 encryptionHelper,
-                spotifyStorageServiceMock.Object
+                authenticateSpotifyUserServiceMock.Object,
+                quizStorageServiceMock.Object,
+                userStorageServiceMock.Object
             );
 
             var request = new TokenRequest { Code = "valid_code" };
@@ -94,19 +85,31 @@ namespace GrooveGlassTest.Controllers
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
-            dynamic response = (SpotifyUserClientResponse)okResult.Value;
-            Assert.Equal(testDisplayName, response?.DisplayName);
-            Assert.False(string.IsNullOrEmpty(response?.JwtToken));
+            var response = Assert.IsType<SpotifyUserClientResponse>(okResult.Value);
+            Assert.Equal(testDisplayName, response.DisplayName);
+            Assert.False(string.IsNullOrEmpty(response.JwtToken));
+            
+            // Verify that the user storage service was called
+            userStorageServiceMock.Verify(x => x.StoreOrUpdateAsync(It.IsAny<SpotifyUser>()), Times.Once);
         }
 
         [Fact]
         public async Task CreateQuiz_ValidQuiz_ReturnsOk()
         {
             // Arrange
-            var mockStorage = new Mock<ISpotifyStorageService>();
-            var mockApi = new Mock<ISpotifyApiService>();
-            var mockEncryption = GetEncryptionHelper();
-            var controller = new SpotifyAuthController(mockApi.Object, mockEncryption, mockStorage.Object);
+            var spotifyApiServiceMock = new Mock<ISpotifyApiService>();
+            var userStorageServiceMock = new Mock<IEntityStorageService<SpotifyUser, string>>();
+            var quizStorageServiceMock = new Mock<IQuizStorageService>();
+            var authenticateSpotifyUserServiceMock = new Mock<IAuthenticateSpotifyUserService>();
+            var encryptionHelper = GetEncryptionHelper();
+
+            var controller = new SpotifyAuthController(
+                spotifyApiServiceMock.Object,
+                encryptionHelper,
+                authenticateSpotifyUserServiceMock.Object,
+                quizStorageServiceMock.Object,
+                userStorageServiceMock.Object
+            );
 
             var quizContent = new QuizContent
             {
@@ -133,11 +136,15 @@ namespace GrooveGlassTest.Controllers
                 HttpContext = new DefaultHttpContext { User = user }
             };
 
+            quizStorageServiceMock
+                .Setup(x => x.StoreOrUpdateAsync(It.IsAny<Quiz>()))
+                .Returns(Task.CompletedTask);
+
             // Act
             var result = await controller.CreateQuiz(quizContent);
 
             // Assert
-            mockStorage.Verify(s => s.StoreQuizAsync(It.IsAny<Quiz>()), Times.Once);
+            quizStorageServiceMock.Verify(s => s.StoreOrUpdateAsync(It.IsAny<Quiz>()), Times.Once);
             Assert.IsType<OkObjectResult>(result);
         }
 
@@ -145,10 +152,19 @@ namespace GrooveGlassTest.Controllers
         public async Task CreateQuiz_InvalidQuiz_ReturnsBadRequest()
         {
             // Arrange
-            var mockStorage = new Mock<ISpotifyStorageService>();
-            var mockApi = new Mock<ISpotifyApiService>();
-            var mockEncryption = GetEncryptionHelper();
-            var controller = new SpotifyAuthController(mockApi.Object, mockEncryption, mockStorage.Object);
+            var spotifyApiServiceMock = new Mock<ISpotifyApiService>();
+            var userStorageServiceMock = new Mock<IEntityStorageService<SpotifyUser, string>>();
+            var quizStorageServiceMock = new Mock<IQuizStorageService>();
+            var authenticateSpotifyUserServiceMock = new Mock<IAuthenticateSpotifyUserService>();
+            var encryptionHelper = GetEncryptionHelper();
+
+            var controller = new SpotifyAuthController(
+                spotifyApiServiceMock.Object,
+                encryptionHelper,
+                authenticateSpotifyUserServiceMock.Object,
+                quizStorageServiceMock.Object,
+                userStorageServiceMock.Object
+            );
 
             // Simulate authenticated user
             var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
@@ -171,10 +187,19 @@ namespace GrooveGlassTest.Controllers
         public async Task CreateQuiz_Unauthorized_ReturnsUnauthorized()
         {
             // Arrange
-            var mockStorage = new Mock<ISpotifyStorageService>();
-            var mockApi = new Mock<ISpotifyApiService>();
-            var mockEncryption = GetEncryptionHelper();
-            var controller = new SpotifyAuthController(mockApi.Object, mockEncryption, mockStorage.Object);
+            var spotifyApiServiceMock = new Mock<ISpotifyApiService>();
+            var userStorageServiceMock = new Mock<IEntityStorageService<SpotifyUser, string>>();
+            var quizStorageServiceMock = new Mock<IQuizStorageService>();
+            var authenticateSpotifyUserServiceMock = new Mock<IAuthenticateSpotifyUserService>();
+            var encryptionHelper = GetEncryptionHelper();
+
+            var controller = new SpotifyAuthController(
+                spotifyApiServiceMock.Object,
+                encryptionHelper,
+                authenticateSpotifyUserServiceMock.Object,
+                quizStorageServiceMock.Object,
+                userStorageServiceMock.Object
+            );
 
             // No user claims
             controller.ControllerContext = new ControllerContext
@@ -202,6 +227,160 @@ namespace GrooveGlassTest.Controllers
 
             // Assert
             Assert.IsType<UnauthorizedResult>(result);
+        }
+
+        [Fact]
+        public async Task RefreshJwtToken_ValidRequest_ReturnsNewTokens()
+        {
+            // Arrange
+            var testUserId = "user123";
+            var testDisplayName = "Test User";
+            var testRefreshToken = "valid_refresh_token";
+
+            var spotifyApiServiceMock = new Mock<ISpotifyApiService>();
+            var userStorageServiceMock = new Mock<IEntityStorageService<SpotifyUser, string>>();
+            var quizStorageServiceMock = new Mock<IQuizStorageService>();
+            var authenticateSpotifyUserServiceMock = new Mock<IAuthenticateSpotifyUserService>();
+            var encryptionHelper = GetEncryptionHelper();
+
+            var existingUser = new SpotifyUser
+            {
+                SpotifyUserId = testUserId,
+                DisplayName = testDisplayName,
+                JwtRefreshToken = testRefreshToken,
+                JwtRefreshTokenExpiration = DateTime.UtcNow.AddDays(1)
+            };
+
+            authenticateSpotifyUserServiceMock
+                .Setup(x => x.GetUserAsync(testUserId))
+                .ReturnsAsync(existingUser);
+
+            userStorageServiceMock
+                .Setup(x => x.StoreOrUpdateAsync(It.IsAny<SpotifyUser>()))
+                .Returns(Task.CompletedTask);
+
+            var controller = new SpotifyAuthController(
+                spotifyApiServiceMock.Object,
+                encryptionHelper,
+                authenticateSpotifyUserServiceMock.Object,
+                quizStorageServiceMock.Object,
+                userStorageServiceMock.Object
+            );
+
+            var request = new RefreshTokenRequest 
+            { 
+                SpotifyUserId = testUserId,
+                JwtRefreshToken = testRefreshToken
+            };
+
+            // Act
+            var result = await controller.RefreshJwtToken(request);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var response = okResult.Value;
+            Assert.NotNull(response);
+            
+            // Verify that the user storage service was called to update the user
+            userStorageServiceMock.Verify(x => x.StoreOrUpdateAsync(It.IsAny<SpotifyUser>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task RefreshJwtToken_InvalidRefreshToken_ReturnsUnauthorized()
+        {
+            // Arrange
+            var testUserId = "user123";
+            var testDisplayName = "Test User";
+            var validRefreshToken = "valid_refresh_token";
+            var invalidRefreshToken = "invalid_refresh_token";
+
+            var spotifyApiServiceMock = new Mock<ISpotifyApiService>();
+            var userStorageServiceMock = new Mock<IEntityStorageService<SpotifyUser, string>>();
+            var quizStorageServiceMock = new Mock<IQuizStorageService>();
+            var authenticateSpotifyUserServiceMock = new Mock<IAuthenticateSpotifyUserService>();
+            var encryptionHelper = GetEncryptionHelper();
+
+            var existingUser = new SpotifyUser
+            {
+                SpotifyUserId = testUserId,
+                DisplayName = testDisplayName,
+                JwtRefreshToken = validRefreshToken,
+                JwtRefreshTokenExpiration = DateTime.UtcNow.AddDays(1)
+            };
+
+            authenticateSpotifyUserServiceMock
+                .Setup(x => x.GetUserAsync(testUserId))
+                .ReturnsAsync(existingUser);
+
+            var controller = new SpotifyAuthController(
+                spotifyApiServiceMock.Object,
+                encryptionHelper,
+                authenticateSpotifyUserServiceMock.Object,
+                quizStorageServiceMock.Object,
+                userStorageServiceMock.Object
+            );
+
+            var request = new RefreshTokenRequest 
+            { 
+                SpotifyUserId = testUserId,
+                JwtRefreshToken = invalidRefreshToken
+            };
+
+            // Act
+            var result = await controller.RefreshJwtToken(request);
+
+            // Assert
+            Assert.IsType<UnauthorizedObjectResult>(result);
+        }
+
+        [Fact]
+        public async Task GetUserQuizzesAsync_ValidUser_ReturnsQuizzes()
+        {
+            // Arrange
+            var testUserId = "user123";
+            var spotifyApiServiceMock = new Mock<ISpotifyApiService>();
+            var userStorageServiceMock = new Mock<IEntityStorageService<SpotifyUser, string>>();
+            var quizStorageServiceMock = new Mock<IQuizStorageService>();
+            var authenticateSpotifyUserServiceMock = new Mock<IAuthenticateSpotifyUserService>();
+            var encryptionHelper = GetEncryptionHelper();
+
+            var testQuizzes = new List<Quiz>
+            {
+                new Quiz { Id = 1, Title = "Quiz 1", SpotifyUserId = testUserId },
+                new Quiz { Id = 2, Title = "Quiz 2", SpotifyUserId = testUserId }
+            };
+
+            quizStorageServiceMock
+                .Setup(x => x.GetUserQuizzesAsync(testUserId))
+                .ReturnsAsync(testQuizzes);
+
+            var controller = new SpotifyAuthController(
+                spotifyApiServiceMock.Object,
+                encryptionHelper,
+                authenticateSpotifyUserServiceMock.Object,
+                quizStorageServiceMock.Object,
+                userStorageServiceMock.Object
+            );
+
+            // Simulate authenticated user
+            var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, testUserId)
+            }, "mock"));
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = user }
+            };
+
+            // Act
+            var result = await controller.GetUserQuizzesAsync();
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var response = okResult.Value;
+            Assert.NotNull(response);
+            
+            quizStorageServiceMock.Verify(x => x.GetUserQuizzesAsync(testUserId), Times.Once);
         }
     }
 }

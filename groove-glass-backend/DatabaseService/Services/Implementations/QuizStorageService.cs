@@ -1,12 +1,16 @@
 using DatabaseService.Models;
+using DatabaseService.Models.Entities;
 using DatabaseService.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace DatabaseService.Services.Implementations
 {
-    public class QuizStorageService : IEntityStorageService<Quiz, int>
+    public class QuizStorageService : IQuizStorageService
     {
         private readonly SpotifyDatabaseContext _context;
         private readonly IMemoryCache _cache;

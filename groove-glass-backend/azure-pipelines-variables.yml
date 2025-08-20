@@ -1,0 +1,35 @@
+# Azure DevOps Pipeline Variables Template
+# Create these variable groups in Azure DevOps Library
+
+# Variable Group: grooveglass-production
+variables:
+- group: grooveglass-production
+
+# Production Variables (to be created in Azure DevOps Library):
+# AZURE_SERVICE_CONNECTION: your-azure-service-connection-name
+# WEB_APP_NAME: your-grooveglass-webapp
+# RESOURCE_GROUP_NAME: your-resource-group
+# SQL_SERVER_NAME: your-sql-server.database.windows.net
+# SQL_DATABASE_NAME: your-database-name
+# SQL_USERNAME: your-sql-username (secured)
+# SQL_PASSWORD: your-sql-password (secured)
+# SPOTIFY_CLIENT_ID: your-spotify-client-id (secured)
+# SPOTIFY_CLIENT_SECRET: your-spotify-client-secret (secured)
+# SPOTIFY_REDIRECT_URI: your-spotify-redirect-uri
+# OPENAI_API_KEY: your-openai-api-key (secured)
+# JWT_KEY: your-jwt-signing-key (secured)
+# JWT_ISSUER: your-jwt-issuer
+# ENCRYPTION_KEY: your-encryption-key (secured)
+
+# Application Settings for Azure Web App:
+# These will be set as environment variables in your Azure Web App
+appSettings:
+  ConnectionStrings__DefaultConnection: "Server=$(SQL_SERVER_NAME);Database=$(SQL_DATABASE_NAME);User Id=$(SQL_USERNAME);Password=$(SQL_PASSWORD);TrustServerCertificate=true;MultipleActiveResultSets=true;"
+  Spotify__ClientId: "$(SPOTIFY_CLIENT_ID)"
+  Spotify__ClientSecret: "$(SPOTIFY_CLIENT_SECRET)"
+  Spotify__RedirectUri: "$(SPOTIFY_REDIRECT_URI)"
+  OpenAi__Key: "$(OPENAI_API_KEY)"
+  Jwt__Key: "$(JWT_KEY)"
+  Jwt__Issuer: "$(JWT_ISSUER)"
+  EncryptionKey: "$(ENCRYPTION_KEY)"
+  ASPNETCORE_ENVIRONMENT: "Production"
