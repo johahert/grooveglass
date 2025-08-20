@@ -22,8 +22,7 @@ export default function HostQuizSelect({ selectedQuiz, setSelectedQuiz }: { sele
       console.log("Fetched quizzes:", quizzes);
     };
     fetchQuizzes();
-  }, [auth.spotifyUser]);
-
+  }, [auth.spotifyUser?.jwtToken]);
 
   return (
       <Select onValueChange={(value) => {

@@ -12,13 +12,15 @@ const SpotifyDeviceSelect = () => {
     const [selectedDevice, setSelectedDevice] = useState<string>("");
 
     const fetchDevices = async () => {
-            const devices: SpotifyDevice[] = await GetSpotifyDevices(auth);
-            console.log("Fetched devices:", devices);
-            if(!devices){
-                console.error("No devices found or error fetching devices");
-                return
-            }
-            setDevices(devices);
+        const devices: SpotifyDevice[] = await GetSpotifyDevices(auth);
+        console.log("Fetched devices:", devices);
+        if(!devices){
+            console.error("No devices found or error fetching devices");
+            return
+        }
+        setDevices(devices);
+        const selectedDeviceInfo: SpotifyDevice = devices.find(device => device.id === selectedDevice);
+
     };
 
     useEffect(() => {
@@ -34,7 +36,7 @@ const SpotifyDeviceSelect = () => {
 
     useEffect(() => {
         fetchDevices();
-    }, [spotifyUser]);
+    }, []);
 
     return (
         <Select value={selectedDevice} onValueChange={setSelectedDevice}>

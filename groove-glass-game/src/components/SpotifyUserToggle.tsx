@@ -1,8 +1,6 @@
 import { useSpotifyAuth } from "@/components/providers/SpotifyAuthProvider";
 import SpotifyDeviceSelect from "./customui/SpotifyDeviceSelect";
 import { Button } from "./ui/button";
-import { NavigationMenu, NavigationMenuContent, NavigationMenuItem } from "./ui/navigation-menu";
-import { Switch } from "./ui/switch";
 import { ThemeToggle } from "./ui/theme-toggle";
 
 const SpotifyUserToggle = () => {
