@@ -141,9 +141,13 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
                 await newConnection.invoke('JoinRoom', currentRoomCode, currentUser.id, currentUser.displayName);
             }
 
+            return newConnection;
+
         } catch (e) {
             console.error('Connection failed: ', e);
             setError('Could not connect to the server.');
+            return null;
+
         } finally {
             setIsLoading(false);
         }
@@ -176,11 +180,19 @@ export const SignalRContextProvider = ({ children }: { children: React.ReactNode
         setUser(currentUser);
         sessionStorage.setItem('quizhub_user', JSON.stringify(currentUser));
 
-        if (!connection) {
-             await connectToHub(currentUser);
-             await new Promise(resolve => setTimeout(resolve, 200));
+        let activeConnection = connection;
+
+        if(!activeConnection){
+            activeConnection = await connectToHub(currentUser);
         }
-        await connection?.invoke('CreateRoom', currentUser.id, displayName, quizId);
+
+        if(activeConnection?.state === 'Connected'){
+            await activeConnection?.invoke('CreateRoom', currentUser.id, displayName, quizId);
+        } else {
+            const errorMsg = 'Failed to establish a connection to the server.';
+            console.error(errorMsg);
+            setError(errorMsg);
+        }
     };
 
     const joinRoom = async (displayName: string, roomCode: string) => {

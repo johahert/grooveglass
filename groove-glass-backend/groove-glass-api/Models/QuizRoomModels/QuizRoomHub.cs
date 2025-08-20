@@ -1,5 +1,4 @@
 ﻿using DatabaseService.Services.Implementations;
-using DatabaseService.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
 
@@ -10,17 +9,19 @@ namespace groove_glass_api.Models.QuizRoomModels
         private static ConcurrentDictionary<string, QuizRoom> _rooms = new();
         private static ConcurrentDictionary<string, (string roomCode, string userId)> _userConnections = new();
         private readonly QuizStorageService _quizStorageService;
+        private readonly ILogger<QuizRoomHub> _logger;
 
-        public QuizRoomHub(QuizStorageService quizStorageService)
+        public QuizRoomHub(QuizStorageService quizStorageService, ILogger<QuizRoomHub> logger)
         {
             _quizStorageService = quizStorageService;
+            _logger = logger;
         }
 
         public async Task CreateRoom(string hostUserId, string displayName, int quizId)
         {
             try
             {
-                Console.WriteLine($"Creating room for host user {hostUserId} with quiz ID {quizId}");
+                _logger.LogInformation($"Creating room for host user {hostUserId} with quiz ID {quizId}");
                 var roomCode = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
 
                 var hostPlayer = new PlayerInfo
@@ -38,7 +39,7 @@ namespace groove_glass_api.Models.QuizRoomModels
                     throw new Exception($"Quiz with ID {quizId} not found.");
                 }
 
-                // Avoid circular reference in JSON
+                // Avoid circular reference in JSON (should replace with DTOs)
                 quiz.Questions = quiz.Questions.Select(x => new QuizQuestion
                 {
                     Question = x.Question,
@@ -67,7 +68,7 @@ namespace groove_glass_api.Models.QuizRoomModels
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in CreateRoom: {ex.Message}");
+                _logger.LogError($"Error in CreateRoom: {ex.Message}");
                 throw;
             }
         }
@@ -103,7 +104,7 @@ namespace groove_glass_api.Models.QuizRoomModels
                     };
 
                     room.Players.Add(newPlayer);
-                    Console.WriteLine($"User {displayName} ({userId}) joined room {roomCode} for the first time");
+                    _logger.LogInformation($"User {displayName} ({userId}) joined room {roomCode} for the first time");
                     await Clients.Group(roomCode).SendAsync("PlayerJoined", newPlayer);
                 }
 
@@ -127,7 +128,7 @@ namespace groove_glass_api.Models.QuizRoomModels
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in UpdateState: {ex.Message}");
+                _logger.LogError($"Error in UpdateState: {ex.Message}");
             }
         }
 
@@ -157,7 +158,7 @@ namespace groove_glass_api.Models.QuizRoomModels
                 {
                     if(_rooms.TryRemove(roomCode, out _))
                     {
-                        Console.WriteLine($"Closing room {roomCode}");
+                        _logger.LogInformation($"Closing room ${roomCode}");
                         await Clients.Group(roomCode).SendAsync("RoomClosed");
                     }
                 }
@@ -175,7 +176,7 @@ namespace groove_glass_api.Models.QuizRoomModels
                     if (player != null)
                     {
                         player.IsConnected = false;
-                        Console.WriteLine($"Player {player.DisplayName} disconnected. Starting grace period.");
+                        _logger.LogInformation($"Player {player.DisplayName} disconnected. Starting grace period.");
                         // Notify clients that the player is attempting to reconnect
                         await Clients.Group(info.roomCode).SendAsync("PlayerDisconnected", player);
 
@@ -186,13 +187,13 @@ namespace groove_glass_api.Models.QuizRoomModels
                             {
                                 room.Players.Remove(player);
                                 await Clients.Group(info.roomCode).SendAsync("PlayerLeft", player);
-                                Console.WriteLine($"Player {player.DisplayName}'s grace period expired. Removed from room.");
+                                _logger.LogInformation($"Player {player.DisplayName}'s grace period expired. Removed from room.");
 
                                 if(player.UserId == room.HostUserId)
                                 {
                                     if (_rooms.TryRemove(info.roomCode, out _))
                                     {
-                                        Console.WriteLine($"Closing room {info.roomCode}");
+                                        _logger.LogInformation($"Closing room {info.roomCode}");
                                         await Clients.Group(info.roomCode).SendAsync("RoomClosed");
                                     }
                                 }
@@ -220,12 +221,7 @@ namespace groove_glass_api.Models.QuizRoomModels
         {
             if(_rooms.TryGetValue(roomCode, out var room))
             {
-                Console.WriteLine($"{roomCode} {answerIndex} - In Submitanswer");
-
-                foreach(var answer in room.State.Answers)
-                {
-                    Console.WriteLine($"Answer: {answer.Key} - {answer.Value}");
-                }
+                _logger.LogInformation($"{roomCode} {answerIndex} - In Submitanswer");
 
                 var connectioninfo = _userConnections.GetValueOrDefault(Context.ConnectionId);
                 var player = room.Players.FirstOrDefault(p => p.UserId == connectioninfo.userId);
@@ -239,12 +235,12 @@ namespace groove_glass_api.Models.QuizRoomModels
                     
                     if(answerIndex == currentQuestion.CorrectAnswer)
                     {
-                        Console.WriteLine($"Player {player.DisplayName} answered correctly in room {roomCode}");
+                        _logger.LogInformation($"Player {player.DisplayName} answered correctly in room {roomCode}");
                         long timeNow = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
                         long timeLeft = ((room.State.QuestionEndTime ?? timeNow) - timeNow) / 1000;
                         var addedScore = (int)Math.Max(0, timeLeft);
                         player.Score += (30 + addedScore);
-                        Console.WriteLine($"Player {player.DisplayName} scored {addedScore} points in room {roomCode}");
+                        _logger.LogInformation($"Player {player.DisplayName} scored {addedScore} points in room {roomCode}");
                     }
 
                     await Clients.Group(roomCode).SendAsync("RoomUpdated", room);

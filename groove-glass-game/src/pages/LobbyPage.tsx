@@ -6,7 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@radix-ui/react-select';
-import { Copy } from 'lucide-react';
+import { Car, Copy } from 'lucide-react';
 
 function LobbyPage() {
     const { room, user, leaveRoom, startGame } = useSignalR();
@@ -41,19 +41,27 @@ function LobbyPage() {
 
     return (
         <Card >
-            {room.quizData.questions.length - 1 === room.state.currentQuestionIndex && room.state.currentQuestionIndex !== 0 && !room.state.isActive && (
-                <div className="bg-gray-700 p-4 rounded-lg mb-6">
-                    <h2 className="text-xl font-bold text-white">Quiz is over!</h2>
-                    <p className="text-white">You can now view the final scores.</p>
-                    {room.players?.map(player => (
-                        <div key={player.userId} className="text-white">
-                            <span className="font-semibold">{player.displayName}: </span>
-                            <span>{player.score ?? 0} points</span>
+            {room.state.currentQuestionIndex >= room.quizData.questions.length - 1 
+            && !room.state.isActive 
+            && room.quizData.questions.length > 1
+            && (
+            <CardHeader>
+                <Card>
+                    <CardHeader>
+                        <div >
+                            <h2 className="text-xl">Quiz is over!</h2>
+                            <p >You can now view the final scores.</p>
+                            {room.players?.map(player => (
+                                <div key={player.userId}>
+                                    <span className="font-semibold">{player.displayName}: </span>
+                                    <span>{player.score ?? 0} points</span>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </CardHeader>
+                </Card>
+            </CardHeader>
             )}
-
             
             <CardHeader >
                 <div className='flex w-full justify-between'>
