@@ -1,5 +1,5 @@
 ﻿using DatabaseService.Models.Entities;
-using DatabaseService.Services.Interfaces;
+using DatabaseService.Services.Implementations;
 using groove_glass_api.Models;
 using groove_glass_api.Models.Frontend;
 using groove_glass_api.Models.Frontend.QuizData;
@@ -15,14 +15,18 @@ namespace groove_glass_api.Controllers
     public class SpotifyAuthController : ControllerBase
     {
         private readonly ISpotifyApiService _spotifyApiService;
-        private readonly ISpotifyStorageService _spotifyStorageService;
         private readonly EncryptionHelper _encryptionHelper;
+        private readonly IAuthenticateSpotifyUserService _authenticateSpotifyUserService;
+        private readonly QuizStorageService _quizStorageService;
+        private readonly UserStorageService _userStorageService;
 
-        public SpotifyAuthController(ISpotifyApiService spotifyApiService, EncryptionHelper encryptionHelper, ISpotifyStorageService spotifyStorageService)
+        public SpotifyAuthController(ISpotifyApiService spotifyApiService, EncryptionHelper encryptionHelper, IAuthenticateSpotifyUserService authenticateSpotifyUserService, QuizStorageService quizStorageService, UserStorageService userStorageService)
         {
             _spotifyApiService = spotifyApiService;
             _encryptionHelper = encryptionHelper;
-            _spotifyStorageService = spotifyStorageService;
+            _authenticateSpotifyUserService = authenticateSpotifyUserService;
+            _quizStorageService = quizStorageService;
+            _userStorageService = userStorageService;
         }
 
         /// <summary>
@@ -62,7 +66,7 @@ namespace groove_glass_api.Controllers
                     JwtRefreshTokenExpiration = DateTime.UtcNow.AddDays(7)
                 };
 
-                await _spotifyStorageService.StoreOrUpdateUserAsync(user);
+                await _userStorageService.StoreOrUpdateAsync(user);
 
                 return Ok(new SpotifyUserClientResponse
                 {
@@ -91,60 +95,17 @@ namespace groove_glass_api.Controllers
             if (string.IsNullOrWhiteSpace(query))
                 return BadRequest("Query is required.");
 
-            // 1. Get user ID from JWT
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                       ?? User.FindFirst("sub")?.Value; 
-            
-            foreach (var claim in User.Claims)
-                Console.WriteLine($"{claim.Type}: {claim.Value}");
+           var (user, accessToken) = await _authenticateSpotifyUserService.GetCurrentUserWithValidTokenAsync();
 
-            if (string.IsNullOrEmpty(userId))
+            if (user == null || string.IsNullOrEmpty(accessToken))
             {
-                Console.WriteLine("User ID not found in JWT");
-                return Unauthorized(new { ErrorMessage = $"No user id found in jwt token" });
+                return Unauthorized("User not authenticated or access token is invalid.");
             }
 
-            // 2. Get user's Spotify access token from DB
-            var user = await _spotifyStorageService.GetUserAsync(userId);
-            if (user == null)
-                return NotFound(new { ErrorMessage = "No user found in database" });
-
-            var accessToken = await GetValidAccessTokenAsync(user);
-
-            // 3. Call Spotify Search API
             var results = await _spotifyApiService.SearchTracksAsync(query, accessToken, 10);
 
             // 4. Return results
             return Ok(results); // results should be a list of song info (id, name, artist, etc.)
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        [Authorize]
-        [HttpGet("access-token")]
-        public async Task<IActionResult> GetAccessToken()
-        {
-            // Get user ID from JWT
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                       ?? User.FindFirst("sub")?.Value;
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                Console.WriteLine("User ID not found in JWT");
-                return Unauthorized();
-            }
-
-            // Get user's Spotify access token from DB
-            var user = await _spotifyStorageService.GetUserAsync(userId);
-            if (user == null)
-                return Unauthorized();
-
-            var accessToken = await GetValidAccessTokenAsync(user);
-
-            // Return the decrypted access token
-            return Ok(new { AccessToken = accessToken });
         }
 
         /// <summary>
@@ -156,32 +117,29 @@ namespace groove_glass_api.Controllers
         [HttpPost("play")]
         public async Task<IActionResult> PlayTrack([FromBody] PlayTrackRequest request)
         {
+            var (user, accessToken) = await _authenticateSpotifyUserService.GetCurrentUserWithValidTokenAsync();
+
+            if(user == null || string.IsNullOrEmpty(accessToken))
+            {
+                return Unauthorized("User not authenticated or access token is invalid.");
+            }
+
             if (string.IsNullOrWhiteSpace(request.TrackId))
+            {
                 return BadRequest("TrackId is required.");
+            }
 
-            // 1. Get user ID from JWT
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                       ?? User.FindFirst("sub")?.Value;
-
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
-
-            // 2. Get user's Spotify access token from DB
-            var user = await _spotifyStorageService.GetUserAsync(userId);
-            if (user == null)
-                return Unauthorized();
-
-            var accessToken = await GetValidAccessTokenAsync(user);
-
-            // 3. Get device ID from request
             if (string.IsNullOrWhiteSpace(request.DeviceId))
+            {
                 return BadRequest("DeviceId is required.");
+            }
 
-            // 4. Call Spotify API to play the track
             var success = await _spotifyApiService.PlayTrackAsync(request.TrackId, request.DeviceId, accessToken);
 
             if (!success)
+            {
                 return StatusCode(500, "Failed to start playback on Spotify.");
+            }
 
             return Ok(new { Message = "Playback started." });
         }
@@ -214,7 +172,7 @@ namespace groove_glass_api.Controllers
             };
 
             // Store the quiz in the database
-            await _spotifyStorageService.StoreQuizAsync(quiz);
+            await _quizStorageService.StoreOrUpdateAsync(quiz);
             return Ok(new { Message = "Quiz created successfully." });
         }
 
@@ -226,17 +184,12 @@ namespace groove_glass_api.Controllers
         [HttpGet("devices")]
         public async Task<IActionResult> GetAvailableDevices()
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                       ?? User.FindFirst("sub")?.Value;
+            var (user, accessToken) = await _authenticateSpotifyUserService.GetCurrentUserWithValidTokenAsync();
 
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
-
-            var user = await _spotifyStorageService.GetUserAsync(userId);
-            if (user == null)
-                return Unauthorized();
-
-            var accessToken = await GetValidAccessTokenAsync(user);
+            if (user == null || string.IsNullOrEmpty(accessToken))
+            {
+                return Unauthorized("User not authenticated or access token is invalid.");
+            }
 
             var devices = await _spotifyApiService.GetAvailableDevicesAsync(accessToken);
 
@@ -253,7 +206,7 @@ namespace groove_glass_api.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
-            var quizzes = await _spotifyStorageService.GetUserQuizzesAsync(userId);
+            var quizzes = await _quizStorageService.GetUserQuizzesAsync(userId);
 
             if (quizzes == null || !quizzes.Any())
             {
@@ -268,51 +221,33 @@ namespace groove_glass_api.Controllers
             .ToList());
         }
 
-        /// <summary>
-        /// Retrieves a valid access token for the user, refreshing it if necessary.
-        /// </summary>
-        /// <param name="user"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        private async Task<string> GetValidAccessTokenAsync(SpotifyUser user)
-        {
-            var now = DateTime.UtcNow;
-
-            if (user.TokenExpiration <= now.AddMinutes(2))
-            {
-                var refreshToken = _encryptionHelper.DecryptString(user.EncryptedRefreshToken);
-                var newToken = await _spotifyApiService.RefreshAccessTokenAsync(refreshToken);
-                if (newToken == null)
-                {
-                    throw new Exception("Failed to refresh Spotify access token.");
-                }
-
-                user.EncryptedAccessToken = _encryptionHelper.EncryptString(newToken.AccessToken);
-                user.TokenExpiration = now.AddSeconds(newToken.ExpiresIn);
-
-                await _spotifyStorageService.StoreOrUpdateUserAsync(user);
-
-                return newToken.AccessToken;
-            } 
-
-            return _encryptionHelper.DecryptString(user.EncryptedAccessToken);
-        }
-
         [HttpPost("refresh-jwt")]
         public async Task<IActionResult> RefreshJwtToken([FromBody] RefreshTokenRequest request)
         {
-            var user = await _spotifyStorageService.GetUserAsync(request.SpotifyUserId);
-            if (user == null || user.JwtRefreshToken != request.JwtRefreshToken || user.JwtRefreshTokenExpiration < DateTime.UtcNow)
-                return Unauthorized();
+            var user = await _authenticateSpotifyUserService.GetUserAsync(request.SpotifyUserId);
+
+            if(user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            if (user.JwtRefreshToken != request.JwtRefreshToken)
+            {
+                return Unauthorized("Invalid refresh token.");
+            }
+
+            if( user.JwtRefreshTokenExpiration < DateTime.UtcNow)
+            {
+                return Unauthorized("Refresh token has expired.");
+            }
 
             var newJwtToken = _encryptionHelper.GenerateJwtToken(user.SpotifyUserId, user.DisplayName);
-
-            // Optionally rotate the refresh token
             var newRefreshToken = _encryptionHelper.GenerateJwtRefreshToken();
+            var newJwtTokenExpiration = _encryptionHelper.GetJwtTokenExpiration(newJwtToken);
+
             user.JwtRefreshToken = newRefreshToken;
             user.JwtRefreshTokenExpiration = DateTime.UtcNow.AddDays(7);
-            var newJwtTokenExpiration = _encryptionHelper.GetJwtTokenExpiration(newJwtToken);
-            await _spotifyStorageService.StoreOrUpdateUserAsync(user);
+            await _userStorageService.StoreOrUpdateAsync(user);
 
             return Ok(new
             {
@@ -331,28 +266,22 @@ namespace groove_glass_api.Controllers
         [HttpPost("pause")]
         public async Task<IActionResult> PauseTrack([FromBody] PlayTrackRequest request)
         {
+            var (user, accessToken) = await _authenticateSpotifyUserService.GetCurrentUserWithValidTokenAsync();
+
+            if(user == null || string.IsNullOrEmpty(accessToken))
+            {
+                return Unauthorized("User not authenticated or access token is invalid.");
+            }
+
             if (string.IsNullOrWhiteSpace(request.DeviceId))
                 return BadRequest("DeviceId is required.");
 
-            // 1. Get user ID from JWT
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                       ?? User.FindFirst("sub")?.Value;
-
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
-
-            // 2. Get user's Spotify access token from DB
-            var user = await _spotifyStorageService.GetUserAsync(userId);
-            if (user == null)
-                return Unauthorized();
-
-            var accessToken = await GetValidAccessTokenAsync(user);
-
-            // 3. Call Spotify API to pause playback
             var success = await _spotifyApiService.PauseTrackAsync(request.DeviceId, accessToken);
 
             if (!success)
+            {
                 return StatusCode(500, "Failed to pause playback on Spotify.");
+            }
 
             return Ok(new { Message = "Playback paused." });
         }

@@ -1,4 +1,5 @@
-﻿using DatabaseService.Services.Interfaces;
+﻿using DatabaseService.Services.Implementations;
+using DatabaseService.Services.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
 
@@ -8,12 +9,11 @@ namespace groove_glass_api.Models.QuizRoomModels
     {
         private static ConcurrentDictionary<string, QuizRoom> _rooms = new();
         private static ConcurrentDictionary<string, (string roomCode, string userId)> _userConnections = new();
+        private readonly QuizStorageService _quizStorageService;
 
-        private readonly ISpotifyStorageService _spotifyStorageService;
-
-        public QuizRoomHub(ISpotifyStorageService spotifyStorageService)
+        public QuizRoomHub(QuizStorageService quizStorageService)
         {
-            _spotifyStorageService = spotifyStorageService;
+            _quizStorageService = quizStorageService;
         }
 
         public async Task CreateRoom(string hostUserId, string displayName, int quizId)
@@ -31,9 +31,9 @@ namespace groove_glass_api.Models.QuizRoomModels
 
                 _userConnections[Context.ConnectionId] = (roomCode, hostUserId);
 
-                var quiz = await _spotifyStorageService.GetQuizAsync(quizId);
+                var quiz = await _quizStorageService.GetAsync(quizId);
 
-                if(quiz == null)
+                if (quiz == null)
                 {
                     throw new Exception($"Quiz with ID {quizId} not found.");
                 }

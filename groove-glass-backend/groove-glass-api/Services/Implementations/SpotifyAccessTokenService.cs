@@ -82,9 +82,11 @@ namespace groove_glass_api.Services.Implementations
             var clientId = _configuration["Spotify:ClientId"];
             var clientSecret = _configuration["Spotify:ClientSecret"];
             var redirectUri = _configuration["Spotify:RedirectUri"];
+
             var client = _httpClientFactory.CreateClient();
             var authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authHeader);
+
             var requestBody = new Dictionary<string, string>
             {
                 { "grant_type", "authorization_code" },
@@ -92,12 +94,15 @@ namespace groove_glass_api.Services.Implementations
                 { "redirect_uri", redirectUri }
             };
             var content = new FormUrlEncodedContent(requestBody);
+
             var response = await client.PostAsync(SPOTIFY_TOKEN_URL, content);
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 throw new Exception($"Spotify token error: {errorContent}");
             }
+
             var responseString = await response.Content.ReadAsStringAsync();
             var tokenResponse = JsonSerializer.Deserialize<SpotifyTokenResponse>(responseString);
 

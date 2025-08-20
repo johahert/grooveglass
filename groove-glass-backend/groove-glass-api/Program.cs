@@ -1,11 +1,16 @@
 using DatabaseService.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using DatabaseService.Models.Entities;
+using DatabaseService.Services.Implementations;
 using groove_glass_api.Models.QuizRoomModels;
+using groove_glass_api.Services.Implementations;
+using groove_glass_api.Services.Interfaces;
+using groove_glass_api.Util;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using OpenAI.Chat;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 ConfigurationManager configuration = builder.Configuration;
@@ -31,10 +36,13 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<SpotifyDatabaseContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<DatabaseService.Services.Interfaces.ISpotifyStorageService, DatabaseService.Services.Implementations.SpotifyStorageService>();
-builder.Services.AddScoped<groove_glass_api.Services.Interfaces.ISpotifyApiService, groove_glass_api.Services.Implementations.SpotifyApiService>();
-builder.Services.AddScoped<groove_glass_api.Util.EncryptionHelper>();
-builder.Services.AddScoped<groove_glass_api.Services.Interfaces.IOpenAiApiService, groove_glass_api.Services.Implementations.OpenAiApiService>();
+builder.Services.AddScoped<ISpotifyApiService, SpotifyApiService>();
+builder.Services.AddScoped<EncryptionHelper>();
+builder.Services.AddScoped<IOpenAiApiService, OpenAiApiService>();
+builder.Services.AddScoped<QuizStorageService>();
+builder.Services.AddScoped<UserStorageService>();
+builder.Services.AddScoped<SpotifyAccessTokenService>();
+builder.Services.AddScoped<IAuthenticateSpotifyUserService, AuthenticateSpotifyUserService>();
 
 builder.Services.AddSingleton<ChatClient>(serviceProvider =>
 {
@@ -112,6 +120,8 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 builder.Services.AddHttpClient();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
 builder.Services.AddSignalR();
 
 var app = builder.Build();

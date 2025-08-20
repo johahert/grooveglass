@@ -4,6 +4,7 @@ namespace groove_glass_api.Services.Interfaces
 {
     public interface IAuthenticateSpotifyUserService
     {
-        Task<(SpotifyUser user, string? accessToken)> GetUserWithAccessTokenAsync(string code);
+        Task<(SpotifyUser? user, string? accessToken)> GetCurrentUserWithValidTokenAsync();
+        Task<SpotifyUser> GetUserAsync(string spotifyUserId);
     }
 }
