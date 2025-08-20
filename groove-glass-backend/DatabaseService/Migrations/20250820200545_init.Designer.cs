@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DatabaseService.Migrations
 {
     [DbContext(typeof(SpotifyDatabaseContext))]
-    [Migration("20250814130414_AddJwtRefreshToken")]
-    partial class AddJwtRefreshToken
+    [Migration("20250820200545_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

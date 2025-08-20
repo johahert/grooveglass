@@ -110,7 +110,7 @@ export const GetSpotifyDevices = async (auth: SpotifyAuthContextType): Promise<a
     }
 }
 
-export const SaveQuiz = async (quiz: Quiz, spotifyUser: any): Promise<any> => {
+export const SaveQuiz = async (quiz: Quiz, auth: SpotifyAuthContextType): Promise<any> => {
     try {
         if (!quiz.title || quiz.questions.length === 0) {
             throw new Error("Quiz title and questions are required");
@@ -124,7 +124,7 @@ export const SaveQuiz = async (quiz: Quiz, spotifyUser: any): Promise<any> => {
                 },
                 body: JSON.stringify(quiz),
             },
-            spotifyUser
+            auth
         );
         if (!response.ok) {
             const errorData = await response.json();

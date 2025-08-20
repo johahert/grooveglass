@@ -16,7 +16,7 @@ import { RadioGroup } from "./ui/radio-group";
 export const CreateQuizForm = () => {
   const [quizTitle, setQuizTitle] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
-  const { spotifyUser } = useSpotifyAuth();
+  const auth = useSpotifyAuth();
 
   const addQuestion = () => {
     const newQuestion: Question = {
@@ -62,7 +62,7 @@ export const CreateQuizForm = () => {
       questions: questions
     };
 
-    SaveQuiz(quiz, spotifyUser)
+    SaveQuiz(quiz, auth)
       .then(() => {
         setQuizTitle("");
         setQuestions([]);
@@ -130,7 +130,7 @@ export const CreateQuizForm = () => {
 
               <div>
                 <Label >Spotify Track</Label>
-                <TrackSearch token={spotifyUser.jwtToken} onTrackSelected={(track) => updateQuestion(question.id, 'spotifyTrack', track.id)} />
+                <TrackSearch token={auth?.spotifyUser?.jwtToken} onTrackSelected={(track) => updateQuestion(question.id, 'spotifyTrack', track.id)} />
               </div>
 
               <div>
