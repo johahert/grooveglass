@@ -109,8 +109,7 @@ namespace groove_glass_api.Controllers
 
             var results = await _spotifyApiService.SearchTracksAsync(query, accessToken, 10);
 
-            // 4. Return results
-            return Ok(results); // results should be a list of song info (id, name, artist, etc.)
+            return Ok(results); 
         }
 
         /// <summary>
@@ -176,7 +175,6 @@ namespace groove_glass_api.Controllers
                 }).ToList()
             };
 
-            // Store the quiz in the database
             await _quizStorageService.StoreOrUpdateAsync(quiz);
             return Ok(new { Message = "Quiz created successfully." });
         }
